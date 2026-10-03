@@ -77,18 +77,6 @@ blocks:
     coordinate: [424, 88.0]
     rotation: 0
     state: enabled
-- name: MY_ID
-  id: variable
-  parameters:
-    comment: ''
-    value: '0'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [592, 12.0]
-    rotation: 0
-    state: enabled
 - name: QPSK_CONST
   id: variable_constellation_rect
   parameters:
@@ -119,30 +107,6 @@ blocks:
     bus_source: false
     bus_structure: null
     coordinate: [320, 92.0]
-    rotation: 0
-    state: enabled
-- name: TX_FREQ_A
-  id: variable
-  parameters:
-    comment: ''
-    value: 2412e6
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [688, 16.0]
-    rotation: 0
-    state: enabled
-- name: TX_FREQ_B
-  id: variable
-  parameters:
-    comment: ''
-    value: 2437e6
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [784, 16.0]
     rotation: 0
     state: enabled
 - name: adpt_alg
@@ -190,7 +154,7 @@ blocks:
   id: variable
   parameters:
     comment: ''
-    value: '0.01'
+    value: '0.006'
   states:
     bus_sink: false
     bus_source: false
@@ -254,7 +218,7 @@ blocks:
     coordinate: [728, 736.0]
     rotation: 0
     state: enabled
-- name: blocks_copy_0_0
+- name: blocks_copy_0
   id: blocks_copy
   parameters:
     affinity: ''
@@ -270,9 +234,9 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [592, 492.0]
+    coordinate: [624, 544.0]
     rotation: 0
-    state: enabled
+    state: disabled
 - name: blocks_copy_1
   id: blocks_copy
   parameters:
@@ -386,7 +350,7 @@ blocks:
     coordinate: [1256, 824.0]
     rotation: 0
     state: disabled
-- name: blocks_tag_gate_0_0
+- name: blocks_tag_gate_0
   id: blocks_tag_gate
   parameters:
     affinity: ''
@@ -402,9 +366,9 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1080, 484.0]
+    coordinate: [1112, 536.0]
     rotation: 0
-    state: enabled
+    state: disabled
 - name: blocks_unpack_k_bits_bb_0
   id: blocks_unpack_k_bits_bb
   parameters:
@@ -469,29 +433,7 @@ blocks:
     coordinate: [712, 1440.0]
     rotation: 0
     state: enabled
-- name: digital_constellation_modulator_0_0_0
-  id: digital_constellation_modulator
-  parameters:
-    affinity: ''
-    alias: ''
-    comment: ''
-    constellation: BPSK_CONST
-    differential: 'True'
-    excess_bw: alpha
-    log: 'False'
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    samples_per_symbol: sps
-    truncate: 'False'
-    verbose: 'False'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [808, 508.0]
-    rotation: 0
-    state: enabled
-- name: digital_constellation_modulator_0_1
+- name: digital_constellation_modulator_0
   id: digital_constellation_modulator
   parameters:
     affinity: ''
@@ -510,7 +452,29 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [792, 348.0]
+    coordinate: [848, 440.0]
+    rotation: 0
+    state: disabled
+- name: digital_constellation_modulator_0_0
+  id: digital_constellation_modulator
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    constellation: BPSK_CONST
+    differential: 'True'
+    excess_bw: alpha
+    log: 'False'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    samples_per_symbol: sps
+    truncate: 'False'
+    verbose: 'False'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [840, 560.0]
     rotation: 0
     state: disabled
 - name: digital_costas_loop_cc_0
@@ -652,65 +616,55 @@ blocks:
 - name: epy_block_0_0
   id: epy_block
   parameters:
-    _source_code: "\"\"\"\nEmbedded Python Block: Burst Packet Framer TX\n- Outputs\
-      \ packed byte PDUs directly to pdu_pdu_to_tagged_stream\n- Zero idle transmission\
-      \ (idle between bursts = complete silence)\n- Zero postamble / trailing idle\n\
-      - Frame layout: [preamble] [1A CF FC 1D] [len: 2B][dest_id: 1B][msg_id: 1B][rep:\
-      \ 1B][n_reps: 1B] [payload] [CRC32: 4B]\n- CRC32 covers header + payload\n\"\
-      \"\"\nimport zlib\nimport pmt\nfrom gnuradio import gr\n\nSYNC_WORD = bytes([0x1A,\
-      \ 0xCF, 0xFC, 0x1D])\n\n\nclass PacketFramerTX(gr.basic_block):\n    def __init__(self,\
-      \ peer_id=1, preamble_len=64, repeat_count=5, max_payload_len=1024, preamble_byte=0xFF):\n\
-      \        gr.basic_block.__init__(\n            self,\n            name=\"Packet\
-      \ Framer TX (Burst)\",\n            in_sig=None,\n            out_sig=None,\n\
-      \        )\n        self.peer_id = int(peer_id) & 0xFF\n        self.preamble_len\
-      \ = int(preamble_len)\n        self.repeat_count = int(repeat_count)\n     \
-      \   self.max_payload_len = int(max_payload_len)\n        self.preamble_byte\
-      \ = int(preamble_byte) & 0xFF\n        self._msg_id = 0\n\n        self.message_port_register_in(pmt.intern(\"\
+    _source_code: "\"\"\"\nEmbedded Python Block: PacketFramerTX with Repetition\n\
+      \"\"\"\nimport numpy as np\nfrom gnuradio import gr\nimport pmt\nimport zlib\n\
+      \nclass PacketFramerTX(gr.basic_block):\n    def __init__(self, preamble_len=32,\
+      \ postamble_len=16, repeat_count=1):\n        gr.basic_block.__init__(\n   \
+      \         self,\n            name=\"Packet Framer TX\",\n            in_sig=None,\n\
+      \            out_sig=None\n        )\n        self.preamble_len = preamble_len\n\
+      \        self.postamble_len = postamble_len\n        self.repeat_count = int(repeat_count)\n\
+      \        self.sync_word = bytes([0x1A, 0xCF, 0xFC, 0x1D])\n\n        self.message_port_register_in(pmt.intern(\"\
       msg_in\"))\n        self.set_msg_handler(pmt.intern(\"msg_in\"), self.handle_msg)\n\
-      \        self.message_port_register_out(pmt.intern(\"pdu_out\"))\n\n    @staticmethod\n\
-      \    def _extract_payload(msg):\n        if pmt.is_pair(msg):\n            data\
-      \ = pmt.cdr(msg)\n            if pmt.is_u8vector(data):\n                return\
-      \ bytes(pmt.u8vector_elements(data))\n            return str(pmt.to_python(data)).encode(\"\
-      utf-8\")\n        if pmt.is_symbol(msg):\n            return pmt.symbol_to_string(msg).encode(\"\
-      utf-8\")\n        val = pmt.to_python(msg)\n        if isinstance(val, (bytes,\
-      \ bytearray)):\n            return bytes(val)\n        return str(val).encode(\"\
-      utf-8\")\n\n    def handle_msg(self, msg):\n        try:\n            payload\
-      \ = self._extract_payload(msg)\n        except Exception as e:\n           \
-      \ print(f\"[TX] Could not parse message: {e}\", flush=True)\n            return\n\
-      \n        if not payload:\n            return\n\n        if len(payload) > self.max_payload_len:\n\
-      \            print(f\"[TX] Payload {len(payload)} B truncated to {self.max_payload_len}\
-      \ B\", flush=True)\n            payload = payload[:self.max_payload_len]\n\n\
-      \        msg_id = self._msg_id\n        self._msg_id = (self._msg_id + 1) &\
-      \ 0xFF\n        n_reps = max(1, min(255, self.repeat_count))\n\n        preamble\
-      \ = bytes([self.preamble_byte]) * self.preamble_len\n        print(f\"[TX] msg\
-      \ #{msg_id} (to peer {self.peer_id}): '{payload.decode('utf-8', 'replace')}'\
-      \ ({n_reps} bursts queued)\", flush=True)\n\n        for rep in range(n_reps):\n\
-      \            header = len(payload).to_bytes(2, \"big\") + bytes([self.peer_id,\
-      \ msg_id, rep, n_reps])\n            crc = zlib.crc32(header + payload).to_bytes(4,\
-      \ \"big\")\n            frame = preamble + SYNC_WORD + header + payload + crc\n\
-      \n            vec = pmt.init_u8vector(len(frame), list(frame))\n           \
-      \ self.message_port_pub(pmt.intern(\"pdu_out\"), pmt.cons(pmt.PMT_NIL, vec))"
+      \        self.message_port_register_out(pmt.intern(\"pdu_out\"))\n\n    def\
+      \ set_repeat_count(self, repeat_count):\n        self.repeat_count = int(repeat_count)\n\
+      \n    def handle_msg(self, msg):\n        try:\n            py_val = pmt.to_python(msg)\n\
+      \            if isinstance(py_val, tuple) and len(py_val) == 2:\n          \
+      \      payload = bytes(py_val[1])\n                text = payload.decode('utf-8',\
+      \ errors='replace')\n            elif isinstance(py_val, str):\n           \
+      \     text = py_val\n                payload = text.encode('utf-8')\n      \
+      \      elif isinstance(py_val, (bytes, bytearray)):\n                payload\
+      \ = bytes(py_val)\n                text = payload.decode('utf-8', errors='replace')\n\
+      \            else:\n                text = str(py_val)\n                payload\
+      \ = text.encode('utf-8')\n        except Exception as e:\n            print(f\"\
+      [TX Error] Failed to parse input message: {e}\", flush=True)\n            return\n\
+      \n        if not payload:\n            return\n\n        # Frame construction\n\
+      \        preamble = bytes([0xAA] * self.preamble_len)\n        length_hdr =\
+      \ len(payload).to_bytes(2, byteorder='big')\n        crc = zlib.crc32(payload).to_bytes(4,\
+      \ byteorder='big')\n        postamble = bytes([0xAA] * self.postamble_len)\n\
+      \n        frame = preamble + self.sync_word + length_hdr + payload + crc + postamble\n\
+      \n        # Create PDU\n        vec = pmt.init_u8vector(len(frame), list(frame))\n\
+      \        pdu = pmt.cons(pmt.PMT_NIL, vec)\n\n        # Publish N times\n   \
+      \     print(f\"[TX] Broadcasting '{text}' ({self.repeat_count} times)...\",\
+      \ flush=True)\n        for _ in range(self.repeat_count):\n            self.message_port_pub(pmt.intern(\"\
+      pdu_out\"), pdu)\n"
     affinity: ''
     alias: ''
     comment: ''
-    max_payload_len: '8196'
     maxoutbuf: '0'
     minoutbuf: '0'
-    peer_id: '1'
-    preamble_byte: '0xFF'
-    preamble_len: '1024'
-    repeat_count: '50'
+    postamble_len: '32'
+    preamble_len: '512'
+    repeat_count: '25'
   states:
-    _io_cache: ('Packet Framer TX (Burst)', 'PacketFramerTX', [('peer_id', '1'), ('preamble_len',
-      '64'), ('repeat_count', '5'), ('max_payload_len', '1024'), ('preamble_byte',
-      '255')], [('msg_in', 'message', 1)], [('pdu_out', 'message', 1)], '', ['max_payload_len',
-      'peer_id', 'preamble_byte', 'preamble_len', 'repeat_count'])
+    _io_cache: ('Packet Framer TX', 'PacketFramerTX', [('preamble_len', '32'), ('postamble_len',
+      '16'), ('repeat_count', '1')], [('msg_in', 'message', 1)], [('pdu_out', 'message',
+      1)], '', ['postamble_len', 'preamble_len', 'repeat_count'])
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [912, 1752.0]
+    coordinate: [1080, 1760.0]
     rotation: 180
-    state: enabled
+    state: disabled
 - name: epy_block_0_0_0
   id: epy_block
   parameters:
@@ -719,18 +673,16 @@ blocks:
       \ GIL load)\n- Positive correlation search only (180-deg phase ambiguity resolved\
       \ upstream by diff decoder)\n- 1-bit false sync backtracking (prevents dropped\
       \ frames on noise triggers)\n- Full CRC32 verification over header + payload\n\
-      - Destination address filtering: drops frames where dest_id != peer_id\n- Message\
-      \ deduplication: displays payload once per msg_id, then logs burst statistics\n\
+      - Message deduplication: displays payload once per msg_id, then logs burst statistics\n\
       \"\"\"\nimport zlib\nimport numpy as np\nimport pmt\nfrom gnuradio import gr\n\
-      \nSYNC_WORD = bytes([0x1A, 0xCF, 0xFC, 0x1D])\nHDR_BYTES = 6  # len (2B) + dest_id\
-      \ (1B) + msg_id (1B) + rep (1B) + n_reps (1B)\n\n\nclass PacketDeframerRX(gr.sync_block):\n\
-      \    def __init__(self, peer_id=1, max_bit_errors=2, max_payload_len=1024, bit_rate=375000):\n\
+      \nSYNC_WORD = bytes([0x1A, 0xCF, 0xFC, 0x1D])\nHDR_BYTES = 5  # len (2B) + msg_id\
+      \ (1B) + rep (1B) + n_reps (1B)\n\n\nclass PacketDeframerRX(gr.sync_block):\n\
+      \    def __init__(self, max_bit_errors=2, max_payload_len=1024, bit_rate=375000):\n\
       \        gr.sync_block.__init__(\n            self,\n            name=\"Packet\
       \ Deframer RX (Fast Burst)\",\n            in_sig=[np.uint8],\n            out_sig=None,\n\
-      \        )\n        self.peer_id = int(peer_id) & 0xFF\n        self.max_bit_errors\
-      \ = int(max_bit_errors)\n        self.max_payload_len = int(max_payload_len)\n\
-      \        self.bit_rate = float(bit_rate)\n\n        # Bipolar template (+1 /\
-      \ -1) for correlation\n        self._sync = np.unpackbits(np.frombuffer(SYNC_WORD,\
+      \        )\n        self.max_bit_errors = int(max_bit_errors)\n        self.max_payload_len\
+      \ = int(max_payload_len)\n        self.bit_rate = float(bit_rate)\n\n      \
+      \  # Bipolar template (+1 / -1) for correlation\n        self._sync = np.unpackbits(np.frombuffer(SYNC_WORD,\
       \ np.uint8)).astype(np.int16) * 2 - 1\n        self._buf = np.zeros(0, dtype=np.uint8)\n\
       \n        self.n_sync = 0\n        self.n_ok = 0\n        self.n_crc_fail =\
       \ 0\n        self.n_bad_len = 0\n\n        self._bits_total = 0\n        self._bits_at_last_ok\
@@ -742,36 +694,34 @@ blocks:
       \ = 100.0 * (n - got) / max(n, 1)\n            print(f\"[RX] msg #{self._cur_id}:\
       \ {got}/{n} bursts OK (Loss: {loss:.0f}%)\", flush=True)\n        self._cur_id\
       \ = None\n        self._cur_reps = set()\n\n    def _deliver(self, header, payload):\n\
-      \        dest_id, msg_id, rep, n_reps = header[2], header[3], header[4], header[5]\n\
-      \        if msg_id != self._cur_id:\n            self._flush_summary()\n   \
-      \         self._cur_id, self._cur_nreps = msg_id, n_reps\n            text =\
-      \ payload.decode(\"utf-8\", errors=\"replace\")\n            print(\"\\n\" +\
-      \ \"=\" * 40, flush=True)\n            print(f\"[RX RECEIVED] #{msg_id}: {text}\"\
-      , flush=True)\n            print(\"=\" * 40 + \"\\n\", flush=True)\n\n     \
-      \       meta = pmt.make_dict()\n            meta = pmt.dict_add(meta, pmt.intern(\"\
-      dest_id\"), pmt.from_long(dest_id))\n            meta = pmt.dict_add(meta, pmt.intern(\"\
-      msg_id\"), pmt.from_long(msg_id))\n            meta = pmt.dict_add(meta, pmt.intern(\"\
-      n_reps\"), pmt.from_long(n_reps))\n            vec = pmt.init_u8vector(len(payload),\
-      \ list(payload))\n            self.message_port_pub(pmt.intern(\"pdu_out\"),\
-      \ pmt.cons(meta, vec))\n            self.message_port_pub(pmt.intern(\"text_out\"\
-      ), pmt.intern(text))\n\n        self._cur_reps.add(rep)\n        self._bits_at_last_ok\
-      \ = self._bits_total\n\n    def work(self, input_items, output_items):\n   \
-      \     bits = input_items[0] & 1\n        self._bits_total += len(bits)\n   \
-      \     self._buf = np.concatenate((self._buf, bits)) if len(self._buf) else bits.copy()\n\
-      \n        # Flush transmission stats once channel has been quiet for > 0.5s\
-      \ of air time\n        if self._cur_id is not None and self._bits_total - self._bits_at_last_ok\
-      \ > 0.5 * self.bit_rate:\n            self._flush_summary()\n\n        thr =\
-      \ 32 - 2 * self.max_bit_errors\n        hdr_bits = 32 + HDR_BYTES * 8\n\n  \
-      \      while True:\n            buf = self._buf\n            if len(buf) < hdr_bits:\n\
-      \                return len(bits)\n\n            # Fast matrix dot product over\
-      \ 32-bit window (only positive peaks)\n            pm = buf.astype(np.int16)\
-      \ * 2 - 1\n            corr = np.lib.stride_tricks.sliding_window_view(pm, 32)\
-      \ @ self._sync\n            cand = np.flatnonzero(corr >= thr)\n\n         \
-      \   if cand.size == 0:\n                self._buf = buf[-31:].copy()  # Preserve\
-      \ trailing bits that might begin a sync word\n                return len(bits)\n\
-      \n            i = int(cand[0])\n\n            if len(buf) < i + hdr_bits:\n\
-      \                self._buf = buf[i:].copy()  # Await complete header bits\n\
-      \                return len(bits)\n\n            header = np.packbits(buf[i\
+      \        msg_id, rep, n_reps = header[2], header[3], header[4]\n        if msg_id\
+      \ != self._cur_id:\n            self._flush_summary()\n            self._cur_id,\
+      \ self._cur_nreps = msg_id, n_reps\n            text = payload.decode(\"utf-8\"\
+      , errors=\"replace\")\n            print(\"\\n\" + \"=\" * 40, flush=True)\n\
+      \            print(f\"[RX RECEIVED] #{msg_id}: {text}\", flush=True)\n     \
+      \       print(\"=\" * 40 + \"\\n\", flush=True)\n\n            meta = pmt.make_dict()\n\
+      \            meta = pmt.dict_add(meta, pmt.intern(\"msg_id\"), pmt.from_long(msg_id))\n\
+      \            meta = pmt.dict_add(meta, pmt.intern(\"n_reps\"), pmt.from_long(n_reps))\n\
+      \            vec = pmt.init_u8vector(len(payload), list(payload))\n        \
+      \    self.message_port_pub(pmt.intern(\"pdu_out\"), pmt.cons(meta, vec))\n \
+      \           self.message_port_pub(pmt.intern(\"text_out\"), pmt.intern(text))\n\
+      \n        self._cur_reps.add(rep)\n        self._bits_at_last_ok = self._bits_total\n\
+      \n    def work(self, input_items, output_items):\n        bits = input_items[0]\
+      \ & 1\n        self._bits_total += len(bits)\n        self._buf = np.concatenate((self._buf,\
+      \ bits)) if len(self._buf) else bits.copy()\n\n        # Flush transmission\
+      \ stats once channel has been quiet for > 0.5s of air time\n        if self._cur_id\
+      \ is not None and self._bits_total - self._bits_at_last_ok > 0.5 * self.bit_rate:\n\
+      \            self._flush_summary()\n\n        thr = 32 - 2 * self.max_bit_errors\n\
+      \        hdr_bits = 32 + HDR_BYTES * 8\n\n        while True:\n            buf\
+      \ = self._buf\n            if len(buf) < hdr_bits:\n                return len(bits)\n\
+      \n            # Fast matrix dot product over 32-bit window (only positive peaks)\n\
+      \            pm = buf.astype(np.int16) * 2 - 1\n            corr = np.lib.stride_tricks.sliding_window_view(pm,\
+      \ 32) @ self._sync\n            cand = np.flatnonzero(corr >= thr)\n\n     \
+      \       if cand.size == 0:\n                self._buf = buf[-31:].copy()  #\
+      \ Preserve trailing bits that might begin a sync word\n                return\
+      \ len(bits)\n\n            i = int(cand[0])\n\n            if len(buf) < i +\
+      \ hdr_bits:\n                self._buf = buf[i:].copy()  # Await complete header\
+      \ bits\n                return len(bits)\n\n            header = np.packbits(buf[i\
       \ + 32 : i + hdr_bits]).tobytes()\n            length = int.from_bytes(header[:2],\
       \ \"big\")\n\n            if length == 0 or length > self.max_payload_len:\n\
       \                self.n_bad_len += 1\n                self._buf = buf[i + 1:].copy()\
@@ -782,13 +732,11 @@ blocks:
       \ 32 : end]).tobytes()\n            hdr, payload, rx_crc = body[:HDR_BYTES],\
       \ body[HDR_BYTES : HDR_BYTES + length], body[-4:]\n            self.n_sync +=\
       \ 1\n\n            if zlib.crc32(hdr + payload) == int.from_bytes(rx_crc, \"\
-      big\"):\n                dest_id = hdr[2]\n                if dest_id == self.peer_id:\n\
-      \                    self.n_ok += 1\n                    self._deliver(hdr,\
-      \ payload)\n                # Frame addressed to another peer: discard silently\n\
-      \                self._buf = buf[end:].copy()  # Advance past valid frame\n\
-      \            else:\n                self.n_crc_fail += 1\n                self._buf\
-      \ = buf[i + 1:].copy()  # Backtrack 1 bit past false sync\n\n        return\
-      \ len(bits)"
+      big\"):\n                self.n_ok += 1\n                self._deliver(hdr,\
+      \ payload)\n                self._buf = buf[end:].copy()  # Advance past valid\
+      \ frame\n            else:\n                self.n_crc_fail += 1\n         \
+      \       self._buf = buf[i + 1:].copy()  # Backtrack 1 bit past false sync\n\n\
+      \        return len(bits)"
     affinity: ''
     alias: ''
     bit_rate: '375000'
@@ -797,32 +745,31 @@ blocks:
     max_payload_len: '8192'
     maxoutbuf: '0'
     minoutbuf: '0'
-    peer_id: MY_ID
   states:
-    _io_cache: ('Packet Deframer RX (Fast Burst)', 'PacketDeframerRX', [('peer_id',
-      '1'), ('max_bit_errors', '2'), ('max_payload_len', '1024'), ('bit_rate', '375000')],
-      [('0', 'byte', 1)], [('text_out', 'message', 1), ('pdu_out', 'message', 1)],
-      '', ['bit_rate', 'max_bit_errors', 'max_payload_len', 'peer_id'])
+    _io_cache: ('Packet Deframer RX (Fast Burst)', 'PacketDeframerRX', [('max_bit_errors',
+      '2'), ('max_payload_len', '1024'), ('bit_rate', '375000')], [('0', 'byte', 1)],
+      [('text_out', 'message', 1), ('pdu_out', 'message', 1)], '', ['bit_rate', 'max_bit_errors',
+      'max_payload_len'])
     bus_sink: false
     bus_source: false
     bus_structure: null
     coordinate: [376, 1736.0]
     rotation: 180
     state: enabled
-- name: iio_pluto_sink_0_0
+- name: iio_pluto_sink_0
   id: iio_pluto_sink
   parameters:
     affinity: ''
     alias: ''
     attenuation1: CH_GAIN
-    bandwidth: int(1.5e6)
+    bandwidth: '20000000'
     buffer_size: '4096'
     comment: ''
     cyclic: 'False'
     filter: ''
     filter_source: '''Auto'''
     fpass: '0'
-    frequency: int(TX_FREQ_A)
+    frequency: int(SDR_CF)
     fstop: '0'
     len_tag_key: ''
     samplerate: int(samp_rate)
@@ -832,22 +779,22 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1328, 340.0]
+    coordinate: [1360, 404.0]
     rotation: 0
-    state: enabled
+    state: disabled
 - name: iio_pluto_source_0
   id: iio_pluto_source
   parameters:
     affinity: ''
     alias: ''
-    bandwidth: int(1.5e6)
+    bandwidth: '20000000'
     bbdc: 'True'
     buffer_size: '4096'
     comment: ''
     filter: ''
     filter_source: '''Auto'''
     fpass: '0'
-    frequency: int(TX_FREQ_B)
+    frequency: int(SDR_CF)
     fstop: '0'
     gain1: '''slow_attack'''
     len_tag_key: packet_len
@@ -880,9 +827,9 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [848, 1592.0]
+    coordinate: [1016, 1608.0]
     rotation: 0
-    state: enabled
+    state: disabled
 - name: qtgui_const_sink_x_0
   id: qtgui_const_sink_x
   parameters:
@@ -1086,9 +1033,9 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1224, 1744.0]
+    coordinate: [1376, 1740.0]
     rotation: 180
-    state: enabled
+    state: disabled
 - name: qtgui_freq_sink_x_0
   id: qtgui_freq_sink_x
   parameters:
@@ -1308,9 +1255,9 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1152, 1592.0]
+    coordinate: [1320, 1600.0]
     rotation: 0
-    state: enabled
+    state: disabled
 - name: virtual_sink_2
   id: virtual_sink
   parameters:
@@ -1350,7 +1297,7 @@ blocks:
     coordinate: [2896, 776.0]
     rotation: 0
     state: enabled
-- name: virtual_sink_5_0
+- name: virtual_sink_5
   id: virtual_sink
   parameters:
     alias: ''
@@ -1360,9 +1307,9 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1352, 556.0]
+    coordinate: [1384, 612.0]
     rotation: 0
-    state: enabled
+    state: disabled
 - name: virtual_source_0
   id: virtual_source
   parameters:
@@ -1376,7 +1323,7 @@ blocks:
     coordinate: [8, 2608.0]
     rotation: 0
     state: disabled
-- name: virtual_source_0_0_0
+- name: virtual_source_0_0
   id: virtual_source
   parameters:
     alias: ''
@@ -1386,9 +1333,9 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [336, 492.0]
+    coordinate: [368, 544.0]
     rotation: 0
-    state: enabled
+    state: disabled
 - name: virtual_source_2
   id: virtual_source
   parameters:
@@ -1432,8 +1379,8 @@ blocks:
 connections:
 - [analog_agc_xx_0, '0', blocks_copy_1, '0']
 - [analog_agc_xx_0, '0', digital_fll_band_edge_cc_0, '0']
-- [blocks_copy_0_0, '0', digital_constellation_modulator_0_0_0, '0']
-- [blocks_copy_0_0, '0', digital_constellation_modulator_0_1, '0']
+- [blocks_copy_0, '0', digital_constellation_modulator_0, '0']
+- [blocks_copy_0, '0', digital_constellation_modulator_0_0, '0']
 - [blocks_copy_1, '0', root_raised_cosine_filter_0, '0']
 - [blocks_copy_1_0, '0', blocks_copy_1, '0']
 - [blocks_copy_1_0, '0', digital_fll_band_edge_cc_0, '0']
@@ -1442,14 +1389,14 @@ connections:
 - [blocks_copy_1_2, '0', root_raised_cosine_filter_0, '0']
 - [blocks_copy_2, '0', digital_costas_loop_cc_0, '0']
 - [blocks_skiphead_0, '0', root_raised_cosine_filter_0, '0']
-- [blocks_tag_gate_0_0, '0', iio_pluto_sink_0_0, '0']
-- [blocks_tag_gate_0_0, '0', virtual_sink_5_0, '0']
+- [blocks_tag_gate_0, '0', iio_pluto_sink_0, '0']
+- [blocks_tag_gate_0, '0', virtual_sink_5, '0']
 - [blocks_unpack_k_bits_bb_0, '0', virtual_sink_2, '0']
 - [blocks_unpack_k_bits_bb_0_0, '0', virtual_sink_2_0, '0']
 - [digital_constellation_decoder_cb_0, '0', digital_diff_decoder_bb_0, '0']
 - [digital_constellation_decoder_cb_0_0, '0', digital_diff_decoder_bb_0_0, '0']
-- [digital_constellation_modulator_0_0_0, '0', blocks_tag_gate_0_0, '0']
-- [digital_constellation_modulator_0_1, '0', blocks_tag_gate_0_0, '0']
+- [digital_constellation_modulator_0, '0', blocks_tag_gate_0, '0']
+- [digital_constellation_modulator_0_0, '0', blocks_tag_gate_0, '0']
 - [digital_costas_loop_cc_0, '0', qtgui_const_sink_x_1, '0']
 - [digital_costas_loop_cc_0, '0', qtgui_freq_sink_x_1, '0']
 - [digital_costas_loop_cc_0, '0', virtual_sink_3, '0']
@@ -1467,7 +1414,7 @@ connections:
 - [qtgui_edit_box_msg_0_0, msg, epy_block_0_0, msg_in]
 - [root_raised_cosine_filter_0, '0', digital_symbol_sync_xx_0, '0']
 - [soapy_rtlsdr_source_0, '0', blocks_copy_1_1, '0']
-- [virtual_source_0_0_0, '0', blocks_copy_0_0, '0']
+- [virtual_source_0_0, '0', blocks_copy_0, '0']
 - [virtual_source_2, '0', digital_constellation_decoder_cb_0, '0']
 - [virtual_source_2, '0', digital_constellation_decoder_cb_0_0, '0']
 - [virtual_source_2, '0', qtgui_const_sink_x_0, '0']
@@ -1476,4 +1423,4 @@ connections:
 
 metadata:
   file_format: 1
-  grc_version: 3.10.9.2
+  grc_version: 3.10.12.0

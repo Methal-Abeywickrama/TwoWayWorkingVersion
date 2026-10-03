@@ -1,0 +1,264 @@
+options:
+  parameters:
+    author: mushab404
+    catch_exceptions: 'True'
+    category: '[GRC Hier Blocks]'
+    cmake_opt: ''
+    comment: ''
+    copyright: ''
+    description: ''
+    gen_cmake: 'On'
+    gen_linking: dynamic
+    generate_options: qt_gui
+    hier_block_src_path: '.:'
+    id: compression
+    max_nouts: '0'
+    output_language: python
+    placement: (0,0)
+    qt_qss_theme: ''
+    realtime_scheduling: ''
+    run: 'True'
+    run_command: '{python} -u {filename}'
+    run_options: prompt
+    sizing_mode: fixed
+    thread_safe_setters: ''
+    title: Not titled yet
+    window_size: (1000,1000)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [8, 8]
+    rotation: 0
+    state: enabled
+
+blocks:
+- name: samp_rate
+  id: variable
+  parameters:
+    comment: ''
+    value: '32000'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [184, 12]
+    rotation: 0
+    state: enabled
+- name: blocks_message_debug_0
+  id: blocks_message_debug
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    en_uvec: 'True'
+    log_level: info
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1304, 264.0]
+    rotation: 0
+    state: enabled
+- name: epy_block_0
+  id: epy_block
+  parameters:
+    _source_code: "import os\nimport site\nimport sys\nimport pmt\nimport numpy as\
+      \ np\nfrom gnuradio import gr\n\n# Load user site packages dynamically\npossible_paths\
+      \ = site.getusersitepackages()\nif isinstance(possible_paths, str):\n    possible_paths\
+      \ = [possible_paths]\nfor path in possible_paths + site.getsitepackages():\n\
+      \    if os.path.exists(path) and path not in sys.path:\n        sys.path.insert(0,\
+      \ path)\n\nimport zstandard as zstd\n\nclass pdu_zstd_compressor(gr.basic_block):\n\
+      \    \"\"\"\n    Compresses incoming PDU payloads using Zstandard and dictionary.\n\
+      \    \"\"\"\n    def __init__(self, dict_path=\"chat_dictionary.zdict\"):\n\
+      \        gr.basic_block.__init__(\n            self,\n            name=\"PDU\
+      \ Zstd Compressor\",\n            in_sig=None,\n            out_sig=None\n \
+      \       )\n        self.message_port_register_in(pmt.intern(\"pdu_in\"))\n \
+      \       self.message_port_register_out(pmt.intern(\"pdu_out\"))\n        self.set_msg_handler(pmt.intern(\"\
+      pdu_in\"), self.handle_pdu)\n\n        base_dir = os.getcwd()\n        resolved_dict_path\
+      \ = os.path.join(base_dir, dict_path)\n\n        if os.path.exists(resolved_dict_path):\n\
+      \            with open(resolved_dict_path, \"rb\") as f:\n                dictionary\
+      \ = zstd.ZstdCompressionDict(f.read())\n            self.compressor = zstd.ZstdCompressor(dict_data=dictionary)\n\
+      \        else:\n            self.compressor = zstd.ZstdCompressor()\n\n    def\
+      \ handle_pdu(self, pdu):\n        meta = pmt.car(pdu)\n        data_vector =\
+      \ pmt.cdr(pdu)\n        \n        raw_bytes = bytes(pmt.u8vector_elements(data_vector))\n\
+      \        compressed_bytes = self.compressor.compress(raw_bytes)\n        \n\
+      \        out_data = pmt.init_u8vector(len(compressed_bytes), list(compressed_bytes))\n\
+      \        out_pdu = pmt.cons(meta, out_data)\n        \n        self.message_port_pub(pmt.intern(\"\
+      pdu_out\"), out_pdu)\n"
+    affinity: ''
+    alias: ''
+    comment: ''
+    dict_path: '''chat_dictionary.zdict'''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+  states:
+    _io_cache: ('PDU Zstd Compressor', 'pdu_zstd_compressor', [('dict_path', "'chat_dictionary.zdict'")],
+      [('pdu_in', 'message', 1)], [('pdu_out', 'message', 1)], '\n    Compresses incoming
+      PDU payloads using Zstandard and dictionary.\n    ', [])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [528, 288.0]
+    rotation: 0
+    state: enabled
+- name: epy_block_1
+  id: epy_block
+  parameters:
+    _source_code: "import os\nimport site\nimport sys\nimport pmt\nimport numpy as\
+      \ np\nfrom gnuradio import gr\n\n# --- DYNAMIC PORTABLE PATH FIX ---\npossible_paths\
+      \ = site.getusersitepackages()\nif isinstance(possible_paths, str):\n    possible_paths\
+      \ = [possible_paths]\n\nfor path in possible_paths + site.getsitepackages():\n\
+      \    if os.path.exists(path) and path not in sys.path:\n        sys.path.insert(0,\
+      \ path)\n\nimport zstandard as zstd\n\n\nclass pdu_zstd_decompressor(gr.basic_block):\n\
+      \    \"\"\"\n    Decompresses incoming Zstandard PDU payloads using a dictionary.\n\
+      \    Inputs and outputs asynchronously via PDU message ports.\n    \"\"\"\n\n\
+      \    def __init__(self, dict_path=\"chat_dictionary.zdict\"):\n        gr.basic_block.__init__(\n\
+      \            self,\n            name=\"PDU Zstd Decompressor\",\n          \
+      \  in_sig=None,\n            out_sig=None,\n        )\n\n        # Register\
+      \ PDU message ports\n        self.message_port_register_in(pmt.intern(\"pdu_in\"\
+      ))\n        self.message_port_register_out(pmt.intern(\"pdu_out\"))\n      \
+      \  self.set_msg_handler(pmt.intern(\"pdu_in\"), self.handle_pdu)\n\n       \
+      \ # Resolve dictionary relative to execution directory\n        base_dir = os.getcwd()\n\
+      \        resolved_dict_path = os.path.join(base_dir, dict_path)\n\n        if\
+      \ os.path.exists(resolved_dict_path):\n            with open(resolved_dict_path,\
+      \ \"rb\") as f:\n                dictionary = zstd.ZstdCompressionDict(f.read())\n\
+      \            self.decompressor = zstd.ZstdDecompressor(dict_data=dictionary)\n\
+      \        elif os.path.exists(dict_path):\n            with open(dict_path, \"\
+      rb\") as f:\n                dictionary = zstd.ZstdCompressionDict(f.read())\n\
+      \            self.decompressor = zstd.ZstdDecompressor(dict_data=dictionary)\n\
+      \        else:\n            # Fallback if no dictionary is found\n         \
+      \   self.decompressor = zstd.ZstdDecompressor()\n\n    def handle_pdu(self,\
+      \ pdu):\n        # Extract metadata dictionary and uniform 8-bit vector payload\n\
+      \        meta = pmt.car(pdu)\n        data_vector = pmt.cdr(pdu)\n\n       \
+      \ try:\n            # Extract raw compressed bytes\n            compressed_bytes\
+      \ = bytes(pmt.u8vector_elements(data_vector))\n\n            # Decompress using\
+      \ zstd\n            decompressed_bytes = self.decompressor.decompress(compressed_bytes)\n\
+      \n            # Re-wrap decompressed bytes into PMT byte vector PDU\n      \
+      \      out_data = pmt.init_u8vector(\n                len(decompressed_bytes),\
+      \ list(decompressed_bytes)\n            )\n            out_pdu = pmt.cons(meta,\
+      \ out_data)\n\n            # Publish decompressed message packet\n         \
+      \   self.message_port_pub(pmt.intern(\"pdu_out\"), out_pdu)\n\n        except\
+      \ Exception as e:\n            # Safely log corrupted or un-decompressable packets\
+      \ over noisy radio channels\n            sys.stderr.write(f\"[PDU Decompressor\
+      \ Error]: {e}\\n\")\n"
+    affinity: ''
+    alias: ''
+    comment: ''
+    dict_path: '''chat_dictionary.zdict'''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+  states:
+    _io_cache: ('PDU Zstd Decompressor', 'pdu_zstd_decompressor', [('dict_path', "'chat_dictionary.zdict'")],
+      [('pdu_in', 'message', 1)], [('pdu_out', 'message', 1)], '\n    Decompresses
+      incoming Zstandard PDU payloads using a dictionary.\n    Inputs and outputs
+      asynchronously via PDU message ports.\n    ', [])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [928, 288.0]
+    rotation: 0
+    state: enabled
+- name: epy_block_2
+  id: epy_block
+  parameters:
+    _source_code: "import sys, os\nfrom gnuradio import gr\n\nclass blk(gr.basic_block):\n\
+      \    def __init__(self):\n        gr.basic_block.__init__(self, name=\"Path\
+      \ Checker\", in_sig=None, out_sig=None)\n        print(\"GRC Python Executable:\"\
+      , sys.executable)\n        print(\"GRC sys.path:\", sys.path)\n"
+    affinity: ''
+    alias: ''
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+  states:
+    _io_cache: ('Path Checker', 'blk', [], [], [], '', [])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [280, 8.0]
+    rotation: 0
+    state: disabled
+- name: epy_block_3
+  id: epy_block
+  parameters:
+    _source_code: "import os\nimport site\nimport sys\nimport json\nimport time\n\
+      import numpy as np\nimport pmt\nfrom gnuradio import gr\n\nclass pdu_chat_generator(gr.basic_block):\n\
+      \    \"\"\"\n    Generates JSON chat message PDUs. Accepts custom strings from\
+      \ QT Message Edit Box.\n    \"\"\"\n    def __init__(self, sender_id=\"A\",\
+      \ recipient_id=\"B\"):\n        gr.basic_block.__init__(\n            self,\n\
+      \            name=\"PDU Chat Generator\",\n            in_sig=None,\n      \
+      \      out_sig=None\n        )\n        self.message_port_register_out(pmt.intern(\"\
+      pdu_out\"))\n        self.message_port_register_in(pmt.intern(\"generate\"))\n\
+      \        self.set_msg_handler(pmt.intern(\"generate\"), self.handle_generate)\n\
+      \n        self.sender_id = sender_id\n        self.recipient_id = recipient_id\n\
+      \        self.msg_counter = 0\n\n    def handle_generate(self, msg):\n     \
+      \   text_content = \"Default Message\"\n\n        # Check if incoming message\
+      \ is a PMT Pair (from QT Message Edit Box)\n        if pmt.is_pair(msg):\n \
+      \           # Extract value from key-value pair ('mes' . 'MESSAGE')\n      \
+      \      val = pmt.cdr(msg)\n            if pmt.is_symbol(val):\n            \
+      \    text_content = pmt.symbol_to_string(val)\n            elif pmt.is_string(val):\n\
+      \                text_content = pmt.symbol_to_string(val)\n        # Check if\
+      \ incoming message is a plain string/symbol\n        elif pmt.is_symbol(msg):\n\
+      \            text_content = pmt.symbol_to_string(msg)\n        elif pmt.is_string(msg):\n\
+      \            text_content = pmt.symbol_to_string(msg)\n\n        # Build JSON\
+      \ using your custom typed string\n        self.msg_counter += 1\n        payload\
+      \ = {\n            \"sender\": self.sender_id,\n            \"recipient\": self.recipient_id,\n\
+      \            \"msg_id\": self.msg_counter,\n            \"timestamp\": int(time.time()),\n\
+      \            \"type\": \"text\",\n            \"content\": text_content\n  \
+      \      }\n\n        # Encode to compact JSON byte string\n        json_bytes\
+      \ = json.dumps(payload, separators=(',', ':')).encode('utf-8')\n\n        #\
+      \ Create PDU: metadata dict + byte array vector\n        meta = pmt.make_dict()\n\
+      \        data = pmt.init_u8vector(len(json_bytes), list(json_bytes))\n     \
+      \   pdu = pmt.cons(meta, data)\n\n        # Publish compressed pipeline input\n\
+      \        self.message_port_pub(pmt.intern(\"pdu_out\"), pdu)\n"
+    affinity: ''
+    alias: ''
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    recipient_id: '"B"'
+    sender_id: '"A"'
+  states:
+    _io_cache: ('PDU Chat Generator', 'pdu_chat_generator', [('sender_id', "'A'"),
+      ('recipient_id', "'B'")], [('generate', 'message', 1)], [('pdu_out', 'message',
+      1)], '\n    Generates JSON chat message PDUs. Accepts custom strings from QT
+      Message Edit Box.\n    ', ['recipient_id', 'sender_id'])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [232, 280.0]
+    rotation: 0
+    state: enabled
+- name: qtgui_edit_box_msg_0
+  id: qtgui_edit_box_msg
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    gui_hint: ''
+    is_pair: 'True'
+    is_static: 'True'
+    key: mes
+    label: mes
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    type: string
+    value: MESSAGE
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [216, 128.0]
+    rotation: 180
+    state: enabled
+
+connections:
+- [epy_block_0, pdu_out, epy_block_1, pdu_in]
+- [epy_block_1, pdu_out, blocks_message_debug_0, print]
+- [epy_block_3, pdu_out, epy_block_0, pdu_in]
+- [qtgui_edit_box_msg_0, msg, epy_block_3, generate]
+
+metadata:
+  file_format: 1
+  grc_version: 3.10.9.2
