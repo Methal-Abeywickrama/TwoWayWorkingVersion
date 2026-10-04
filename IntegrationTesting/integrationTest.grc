@@ -174,6 +174,27 @@ blocks:
     coordinate: [480, 16.0]
     rotation: 0
     state: enabled
+- name: power_threshold
+  id: variable_qtgui_range
+  parameters:
+    comment: ''
+    gui_hint: ''
+    label: ''
+    min_len: '200'
+    orient: QtCore.Qt.Horizontal
+    rangeType: float
+    start: '-100'
+    step: '1'
+    stop: '0'
+    value: '-25'
+    widget: counter_slider
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [720, 28.0]
+    rotation: 0
+    state: enabled
 - name: samp_rate
   id: variable
   parameters:
@@ -336,6 +357,26 @@ blocks:
     bus_source: false
     bus_structure: null
     coordinate: [728, 736.0]
+    rotation: 0
+    state: enabled
+- name: analog_pwr_squelch_xx_0
+  id: analog_pwr_squelch_xx
+  parameters:
+    affinity: ''
+    alias: ''
+    alpha: 1e-4
+    comment: ''
+    gate: 'True'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    ramp: '0'
+    threshold: power_threshold
+    type: complex
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [704, 980.0]
     rotation: 0
     state: enabled
 - name: blocks_copy_0_0
@@ -880,8 +921,8 @@ blocks:
     minoutbuf: '0'
     peer_id: '1'
     preamble_byte: '0xFF'
-    preamble_len: '1024'
-    repeat_count: '1'
+    preamble_len: '128'
+    repeat_count: '5'
   states:
     _io_cache: ('Packet Framer TX (Burst)', 'PacketFramerTX', [('peer_id', '1'), ('preamble_len',
       '64'), ('repeat_count', '5'), ('max_payload_len', '1024'), ('preamble_byte',
@@ -1179,8 +1220,8 @@ blocks:
   states:
     _io_cache: '(''SR-ARQ FSM Core'', ''blk'', [(''m'', ''4''), (''rto_ms'', ''500''),
       (''node_role'', "''initiator''"), (''mtu_bytes'', ''200''), (''local_addr'',
-      ''0''), (''local_port'', ''0''), (''max_retries'', ''10'')], [(''app_in'', ''message'',
-      1), (''pdu_in'', ''message'', 1)], [(''app_out'', ''message'', 1), (''pdu_out'',
+      ''0''), (''local_port'', ''0''), (''max_retries'', ''10'')], [(''pdu_in'', ''message'',
+      1), (''app_in'', ''message'', 1)], [(''app_out'', ''message'', 1), (''pdu_out'',
       ''message'', 1)], ''\nBlock 2: SR-ARQ FSM Core\nEnv vars: TL_M, TL_RTO_MS, TL_ROLE,
       TL_MTU, TL_LOCAL_ADDR,\n          TL_LOCAL_PORT, TL_MAX_RETRIES\n'', [''local_addr'',
       ''local_port'', ''m'', ''max_retries''])'
@@ -1916,12 +1957,12 @@ blocks:
     state: enabled
 
 connections:
+- [analog_agc_xx_0, '0', analog_pwr_squelch_xx_0, '0']
 - [analog_agc_xx_0, '0', blocks_copy_1, '0']
-- [analog_agc_xx_0, '0', digital_fll_band_edge_cc_0, '0']
+- [analog_pwr_squelch_xx_0, '0', digital_fll_band_edge_cc_0, '0']
 - [blocks_copy_0_0, '0', digital_constellation_modulator_0_0_0, '0']
 - [blocks_copy_0_0, '0', digital_constellation_modulator_0_1, '0']
 - [blocks_copy_1, '0', root_raised_cosine_filter_0, '0']
-- [blocks_copy_1_0, '0', blocks_copy_1, '0']
 - [blocks_copy_1_0, '0', digital_fll_band_edge_cc_0, '0']
 - [blocks_copy_1_1, '0', analog_agc_xx_0, '0']
 - [blocks_copy_1_1, '0', blocks_copy_1_0, '0']
@@ -1956,7 +1997,6 @@ connections:
 - [epy_block_0_0_0, pdu_out, epy_block_0, pdus]
 - [epy_block_1, app_out, zeromq_push_msg_sink_0, in]
 - [epy_block_1, pdu_out, epy_block_2, pdus]
-- [epy_block_2, pdus, blocks_message_debug_1, print_pdu]
 - [epy_block_2, pdus, epy_block_0_0, msg_in]
 - [iio_pluto_source_0, '0', blocks_copy_1_1, '0']
 - [pdu_pdu_filter_0, pdus, epy_block_1, pdu_in]
