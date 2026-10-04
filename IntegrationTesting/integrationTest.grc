@@ -81,7 +81,7 @@ blocks:
   id: variable
   parameters:
     comment: ''
-    value: '0'
+    value: tl_local_addr
   states:
     bus_sink: false
     bus_source: false
@@ -268,6 +268,18 @@ blocks:
     bus_source: false
     bus_structure: null
     coordinate: [24, 1124.0]
+    rotation: 0
+    state: enabled
+- name: tl_peer_addr
+  id: variable
+  parameters:
+    comment: ''
+    value: int(os.environ.get('TL_PEER_ADDR', '2'))
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [200, 1196.0]
     rotation: 0
     state: enabled
 - name: tl_role
@@ -836,20 +848,24 @@ blocks:
   parameters:
     _source_code: "\"\"\"\nEmbedded Python Block: Burst Packet Framer TX\n- Outputs\
       \ packed byte PDUs directly to pdu_pdu_to_tagged_stream\n- Zero idle transmission\
-      \ (idle between bursts = complete silence)\n- Zero postamble / trailing idle\n\
-      - Frame layout: [preamble] [1A CF FC 1D] [len: 2B][dest_id: 1B][msg_id: 1B][rep:\
-      \ 1B][n_reps: 1B] [payload] [CRC32: 4B]\n- CRC32 covers header + payload\n\"\
-      \"\"\nimport zlib\nimport pmt\nfrom gnuradio import gr\n\nSYNC_WORD = bytes([0x1A,\
-      \ 0xCF, 0xFC, 0x1D])\n\n\nclass PacketFramerTX(gr.basic_block):\n    def __init__(self,\
-      \ peer_id=1, preamble_len=64, repeat_count=5, max_payload_len=1024, preamble_byte=0xFF):\n\
-      \        gr.basic_block.__init__(\n            self,\n            name=\"Packet\
-      \ Framer TX (Burst)\",\n            in_sig=None,\n            out_sig=None,\n\
-      \        )\n        self.peer_id = int(peer_id) & 0xFF\n        self.preamble_len\
-      \ = int(preamble_len)\n        self.repeat_count = int(repeat_count)\n     \
-      \   self.max_payload_len = int(max_payload_len)\n        self.preamble_byte\
-      \ = int(preamble_byte) & 0xFF\n        self._msg_id = 0\n\n        self.message_port_register_in(pmt.intern(\"\
-      msg_in\"))\n        self.set_msg_handler(pmt.intern(\"msg_in\"), self.handle_msg)\n\
-      \        self.message_port_register_out(pmt.intern(\"pdu_out\"))\n\n    @staticmethod\n\
+      \ (idle between bursts = complete silence)\n- Postamble: postamble_len zero\
+      \ bytes after the CRC, so the last real bytes are\n  pushed out of the Pluto\
+      \ sink buffer / RX filters (deframer ignores them)\n- Frame layout: [preamble]\
+      \ [1A CF FC 1D] [len: 2B][dest_id: 1B][msg_id: 1B][rep: 1B][n_reps: 1B] [payload]\
+      \ [CRC32: 4B]\n- CRC32 covers header + payload\n\"\"\"\nimport zlib\nimport\
+      \ pmt\nfrom gnuradio import gr\n\nSYNC_WORD = bytes([0x1A, 0xCF, 0xFC, 0x1D])\n\
+      \n\nclass PacketFramerTX(gr.basic_block):\n    def __init__(self, peer_id=1,\
+      \ preamble_len=64, repeat_count=5, max_payload_len=1024, preamble_byte=0xFF,\n\
+      \                 postamble_len=160):\n        gr.basic_block.__init__(\n  \
+      \          self,\n            name=\"Packet Framer TX (Burst)\",\n         \
+      \   in_sig=None,\n            out_sig=None,\n        )\n        self.peer_id\
+      \ = int(peer_id) & 0xFF\n        self.preamble_len = int(preamble_len)\n   \
+      \     self.repeat_count = int(repeat_count)\n        self.max_payload_len =\
+      \ int(max_payload_len)\n        self.preamble_byte = int(preamble_byte) & 0xFF\n\
+      \        self.postamble_len = max(0, int(postamble_len))\n        self._msg_id\
+      \ = 0\n\n        self.message_port_register_in(pmt.intern(\"msg_in\"))\n   \
+      \     self.set_msg_handler(pmt.intern(\"msg_in\"), self.handle_msg)\n      \
+      \  self.message_port_register_out(pmt.intern(\"pdu_out\"))\n\n    @staticmethod\n\
       \    def _extract_payload(msg):\n        if pmt.is_pair(msg):\n            data\
       \ = pmt.cdr(msg)\n            if pmt.is_u8vector(data):\n                return\
       \ bytes(pmt.u8vector_elements(data))\n            return str(pmt.to_python(data)).encode(\"\
@@ -865,11 +881,11 @@ blocks:
       \        msg_id = self._msg_id\n        self._msg_id = (self._msg_id + 1) &\
       \ 0xFF\n        n_reps = max(1, min(255, self.repeat_count))\n\n        preamble\
       \ = bytes([self.preamble_byte]) * self.preamble_len\n        print(f\"[TX] msg\
-      \ #{msg_id} (to peer {self.peer_id}): '{payload.decode('utf-8', 'replace')}'\
-      \ ({n_reps} bursts queued)\", flush=True)\n\n        for rep in range(n_reps):\n\
-      \            header = len(payload).to_bytes(2, \"big\") + bytes([self.peer_id,\
-      \ msg_id, rep, n_reps])\n            crc = zlib.crc32(header + payload).to_bytes(4,\
-      \ \"big\")\n            frame = preamble + SYNC_WORD + header + payload + crc\n\
+      \ #{msg_id} (to peer {self.peer_id}): {len(payload)} B payload ({n_reps} bursts\
+      \ queued)\", flush=True)\n\n        for rep in range(n_reps):\n            header\
+      \ = len(payload).to_bytes(2, \"big\") + bytes([self.peer_id, msg_id, rep, n_reps])\n\
+      \            crc = zlib.crc32(header + payload).to_bytes(4, \"big\")\n     \
+      \       frame = preamble + SYNC_WORD + header + payload + crc + bytes(self.postamble_len)\n\
       \n            vec = pmt.init_u8vector(len(frame), list(frame))\n           \
       \ self.message_port_pub(pmt.intern(\"pdu_out\"), pmt.cons(pmt.PMT_NIL, vec))"
     affinity: ''
@@ -879,14 +895,16 @@ blocks:
     maxoutbuf: '0'
     minoutbuf: '0'
     peer_id: '1'
+    postamble_len: '160'
     preamble_byte: '0xFF'
     preamble_len: '1024'
     repeat_count: '1'
   states:
     _io_cache: ('Packet Framer TX (Burst)', 'PacketFramerTX', [('peer_id', '1'), ('preamble_len',
       '64'), ('repeat_count', '5'), ('max_payload_len', '1024'), ('preamble_byte',
-      '255')], [('msg_in', 'message', 1)], [('pdu_out', 'message', 1)], '', ['max_payload_len',
-      'peer_id', 'preamble_byte', 'preamble_len', 'repeat_count'])
+      '255'), ('postamble_len', '160')], [('msg_in', 'message', 1)], [('pdu_out',
+      'message', 1)], '', ['max_payload_len', 'peer_id', 'postamble_len', 'preamble_byte',
+      'preamble_len', 'repeat_count'])
     bus_sink: false
     bus_source: false
     bus_structure: null
@@ -975,7 +993,7 @@ blocks:
     alias: ''
     bit_rate: '375000'
     comment: ''
-    max_bit_errors: '1'
+    max_bit_errors: tl_peer_addr
     max_payload_len: '8192'
     maxoutbuf: '0'
     minoutbuf: '0'
@@ -994,83 +1012,95 @@ blocks:
 - name: epy_block_1
   id: epy_block
   parameters:
-    _source_code: "import os, struct, threading\nimport pmt\nfrom gnuradio import\
-      \ gr\n\nPKT_SYN=0x01; PKT_SYN_ACK=0x02; PKT_DATA=0x03\nPKT_ACK=0x04; PKT_FIN=0x05;\
-      \ PKT_FIN_ACK=0x06\nMEDIA_CODE = {\"text\":0x01, \"image\":0x02, \"audio\":0x03}\n\
-      MEDIA_STR  = {0x01:\"text\", 0x02:\"image\", 0x03:\"audio\"}\nPKT_CODE   = {\"\
-      SYN\":PKT_SYN, \"SYN_ACK\":PKT_SYN_ACK, \"DATA\":PKT_DATA,\n              \"\
-      ACK\":PKT_ACK, \"FIN\":PKT_FIN, \"FIN_ACK\":PKT_FIN_ACK}\nPKT_STR    = {v:k\
-      \ for k,v in PKT_CODE.items()}\nIDLE=\"IDLE\"; SYN_SENT=\"SYN_SENT\"; SYN_RCVD=\"\
-      SYN_RCVD\"\nTX_ACTIVE=\"TX_ACTIVE\"; RX_ACTIVE=\"RX_ACTIVE\"; FIN_SENT=\"FIN_SENT\"\
-      \n\n\nclass blk(gr.sync_block):\n    \"\"\"\n    Block 2: SR-ARQ FSM Core\n\
-      \    Env vars: TL_M, TL_RTO_MS, TL_ROLE, TL_MTU, TL_LOCAL_ADDR,\n          \
-      \    TL_LOCAL_PORT, TL_MAX_RETRIES\n    \"\"\"\n\n    def __init__(self,\n \
-      \                m=int(os.environ.get('TL_M', '4')),\n                 rto_ms=int(os.environ.get('TL_RTO_MS',\
-      \ '500')),\n                 node_role=os.environ.get('TL_ROLE', 'initiator'),\n\
-      \                 mtu_bytes=int(os.environ.get('TL_MTU', '200')),\n        \
-      \         local_addr=int(os.environ.get('TL_LOCAL_ADDR', '0')),\n          \
-      \       local_port=int(os.environ.get('TL_LOCAL_PORT', '0')),\n            \
-      \     max_retries=int(os.environ.get('TL_MAX_RETRIES', '10'))):\n        gr.sync_block.__init__(self,\
-      \ name=\"SR-ARQ FSM Core\",\n                               in_sig=None, out_sig=None)\n\
-      \        assert node_role in (\"initiator\", \"responder\"), \"TL_ROLE must\
-      \ be initiator or responder\"\n        assert 1 <= m <= 8,   \"TL_M must be\
-      \ 1..8\"\n        assert mtu_bytes > 0, \"TL_MTU must be > 0\"\n        self.m\
-      \           = m\n        self.seq_space   = 1 << m\n        self.win_size  \
-      \  = 1 << (m - 1)\n        self.rto_s       = rto_ms / 1000.0\n        self.role\
-      \        = node_role\n        self.mtu         = mtu_bytes\n        self.local_addr\
-      \  = local_addr & 0xFF\n        self.local_port  = local_port & 0xFF\n     \
-      \   self.max_retries = max_retries\n        self.message_port_register_in(pmt.intern(\"\
-      pdu_in\"))\n        self.message_port_register_in(pmt.intern(\"app_in\"))\n\
-      \        self.message_port_register_out(pmt.intern(\"pdu_out\"))\n        self.message_port_register_out(pmt.intern(\"\
-      app_out\"))\n        self.set_msg_handler(pmt.intern(\"pdu_in\"), self.handle_pdu_in)\n\
-      \        self.set_msg_handler(pmt.intern(\"app_in\"), self.handle_app_in)\n\
-      \        self._lock   = threading.Lock()\n        self._timers = [None] * self.seq_space\n\
-      \        self._reset_state()\n\n    def _reset_state(self):\n        self._cancel_all_timers()\n\
+    _source_code: "# SR-ARQ FSM Core - patched: fixes A-E from INTEGRATION_NOTES.md\
+      \ (control timer slot,\n# post-session re-ACK, RX inactivity timeout, DATA retry\
+      \ cap, tx_done/tx_failed/tx_busy events)\nimport os, struct, threading\nimport\
+      \ pmt\nfrom gnuradio import gr\n\nPKT_SYN=0x01; PKT_SYN_ACK=0x02; PKT_DATA=0x03\n\
+      PKT_ACK=0x04; PKT_FIN=0x05; PKT_FIN_ACK=0x06\nMEDIA_CODE = {\"text\":0x01, \"\
+      image\":0x02, \"audio\":0x03}\nMEDIA_STR  = {0x01:\"text\", 0x02:\"image\",\
+      \ 0x03:\"audio\"}\nPKT_CODE   = {\"SYN\":PKT_SYN, \"SYN_ACK\":PKT_SYN_ACK, \"\
+      DATA\":PKT_DATA,\n              \"ACK\":PKT_ACK, \"FIN\":PKT_FIN, \"FIN_ACK\"\
+      :PKT_FIN_ACK}\nPKT_STR    = {v:k for k,v in PKT_CODE.items()}\nIDLE=\"IDLE\"\
+      ; SYN_SENT=\"SYN_SENT\"; SYN_RCVD=\"SYN_RCVD\"\nTX_ACTIVE=\"TX_ACTIVE\"; RX_ACTIVE=\"\
+      RX_ACTIVE\"; FIN_SENT=\"FIN_SENT\"\n\n\nclass blk(gr.sync_block):\n    \"\"\"\
+      \n    Block 2: SR-ARQ FSM Core\n    Env vars: TL_M, TL_RTO_MS, TL_ROLE, TL_MTU,\
+      \ TL_LOCAL_ADDR,\n              TL_LOCAL_PORT, TL_MAX_RETRIES\n    \"\"\"\n\n\
+      \    def __init__(self,\n                 m=int(os.environ.get('TL_M', '4')),\n\
+      \                 rto_ms=int(os.environ.get('TL_RTO_MS', '500')),\n        \
+      \         node_role=os.environ.get('TL_ROLE', 'initiator'),\n              \
+      \   mtu_bytes=int(os.environ.get('TL_MTU', '200')),\n                 local_addr=int(os.environ.get('TL_LOCAL_ADDR',\
+      \ '0')),\n                 local_port=int(os.environ.get('TL_LOCAL_PORT', '0')),\n\
+      \                 max_retries=int(os.environ.get('TL_MAX_RETRIES', '10'))):\n\
+      \        gr.sync_block.__init__(self, name=\"SR-ARQ FSM Core\",\n          \
+      \                     in_sig=None, out_sig=None)\n        assert node_role in\
+      \ (\"initiator\", \"responder\"), \"TL_ROLE must be initiator or responder\"\
+      \n        assert 1 <= m <= 8,   \"TL_M must be 1..8\"\n        assert mtu_bytes\
+      \ > 0, \"TL_MTU must be > 0\"\n        self.m           = m\n        self.seq_space\
+      \   = 1 << m\n        self.win_size    = 1 << (m - 1)\n        self.rto_s  \
+      \     = rto_ms / 1000.0\n        self.role        = node_role\n        self.mtu\
+      \         = mtu_bytes\n        self.local_addr  = local_addr & 0xFF\n      \
+      \  self.local_port  = local_port & 0xFF\n        self.max_retries = max_retries\n\
+      \        self.message_port_register_in(pmt.intern(\"pdu_in\"))\n        self.message_port_register_in(pmt.intern(\"\
+      app_in\"))\n        self.message_port_register_out(pmt.intern(\"pdu_out\"))\n\
+      \        self.message_port_register_out(pmt.intern(\"app_out\"))\n        self.set_msg_handler(pmt.intern(\"\
+      pdu_in\"), self.handle_pdu_in)\n        self.set_msg_handler(pmt.intern(\"app_in\"\
+      ), self.handle_app_in)\n        self._lock   = threading.Lock()\n        self._timers\
+      \ = [None] * (self.seq_space + 1)\n        self.last_done_sid = None\n     \
+      \   self._reset_state()\n\n    def _reset_state(self):\n        self._cancel_all_timers()\n\
       \        self.state = IDLE; self.session_id = 0\n        self.dst_addr = 0;\
       \ self.dst_port = 0\n        self.ctrl_retries = 0; self.media_code = 0x00\n\
       \        self.all_tx_pkts  = []\n        self.tx_buf   = [None]  * self.seq_space\n\
-      \        self.acked    = [False] * self.seq_space\n        self.send_base =\
-      \ 0; self.next_seq_abs = 0; self.total_tx = 0\n        self.rx_buf         =\
-      \ [None]  * self.seq_space\n        self.received       = [False] * self.seq_space\n\
-      \        self.rcv_base = 0; self.total_rx = 0\n        self.pkts_delivered =\
-      \ 0; self.reassembled = bytearray()\n\n    def _start_timer(self, slot):\n \
-      \       self._cancel_timer(slot)\n        t = threading.Timer(self.rto_s, self._on_timeout,\
-      \ args=[slot])\n        t.daemon = True; self._timers[slot] = t; t.start()\n\
-      \n    def _cancel_timer(self, slot):\n        if self._timers[slot]:\n     \
-      \       self._timers[slot].cancel(); self._timers[slot] = None\n\n    def _cancel_all_timers(self):\n\
-      \        if not hasattr(self, \"_timers\"): return\n        for i in range(len(self._timers)):\
-      \ self._cancel_timer(i)\n\n    def _on_timeout(self, slot):\n        ctrl =\
-      \ self.seq_space - 1\n        with self._lock:\n            if slot == ctrl:\n\
-      \                if self.state == SYN_SENT:\n                    self.ctrl_retries\
-      \ += 1\n                    if self.ctrl_retries > self.max_retries:\n     \
-      \                   gr.log.error(\"FSM: SYN retry limit exceeded\")\n      \
-      \                  self._reset_state(); return\n                    gr.log.warn(f\"\
-      FSM: SYN RTO retry {self.ctrl_retries}/{self.max_retries}\")\n             \
-      \       self._emit_ctrl(PKT_SYN, total_pkts=self.total_tx, media=self.media_code)\n\
+      \        self.acked    = [False] * self.seq_space\n        self.data_retries\
+      \ = [0] * self.seq_space\n        self.send_base = 0; self.next_seq_abs = 0;\
+      \ self.total_tx = 0\n        self.rx_buf         = [None]  * self.seq_space\n\
+      \        self.received       = [False] * self.seq_space\n        self.rcv_base\
+      \ = 0; self.total_rx = 0\n        self.pkts_delivered = 0; self.reassembled\
+      \ = bytearray()\n\n    def _start_timer(self, slot, timeout=None):\n       \
+      \ self._cancel_timer(slot)\n        t = threading.Timer(timeout or self.rto_s,\
+      \ self._on_timeout, args=[slot])\n        t.daemon = True; self._timers[slot]\
+      \ = t; t.start()\n\n    def _cancel_timer(self, slot):\n        if self._timers[slot]:\n\
+      \            self._timers[slot].cancel(); self._timers[slot] = None\n\n    def\
+      \ _cancel_all_timers(self):\n        if not hasattr(self, \"_timers\"): return\n\
+      \        for i in range(len(self._timers)): self._cancel_timer(i)\n\n    def\
+      \ _on_timeout(self, slot):\n        ctrl = self.seq_space\n        with self._lock:\n\
+      \            if slot == ctrl:\n                if self.state == SYN_SENT:\n\
+      \                    self.ctrl_retries += 1\n                    if self.ctrl_retries\
+      \ > self.max_retries:\n                        gr.log.error(\"FSM: SYN retry\
+      \ limit exceeded\")\n                        self._notify(\"tx_failed\"); self._reset_state();\
+      \ return\n                    gr.log.warn(f\"FSM: SYN RTO retry {self.ctrl_retries}/{self.max_retries}\"\
+      )\n                    self._emit_ctrl(PKT_SYN, total_pkts=self.total_tx, media=self.media_code)\n\
       \                    self._start_timer(ctrl)\n                elif self.state\
       \ == FIN_SENT:\n                    self.ctrl_retries += 1\n               \
       \     if self.ctrl_retries > self.max_retries:\n                        gr.log.warn(\"\
-      FSM: FIN retry limit exceeded\")\n                        self._reset_state();\
-      \ return\n                    gr.log.warn(f\"FSM: FIN RTO retry {self.ctrl_retries}/{self.max_retries}\"\
-      )\n                    self._emit_ctrl(PKT_FIN)\n                    self._start_timer(ctrl)\n\
-      \            else:\n                if self.state == TX_ACTIVE and not self.acked[slot]:\n\
-      \                    gr.log.warn(f\"FSM: DATA RTO slot={slot}\")\n         \
-      \           self._emit_data(slot); self._start_timer(slot)\n\n    def handle_app_in(self,\
-      \ msg):\n        if not pmt.is_pair(msg): return\n        d = pmt.cdr(msg)\n\
-      \        if not pmt.is_u8vector(d): return\n        frame = bytes(pmt.u8vector_elements(d))\n\
-      \        if len(frame) < 8:\n            gr.log.error(\"FSM app_in: frame too\
-      \ short\"); return\n        dst_addr, dst_port, type_byte, _ = struct.unpack_from(\"\
-      >BBBB\", frame, 0)\n        declared_len = struct.unpack_from(\">I\", frame,\
-      \ 4)[0]\n        if len(frame) != 8 + declared_len:\n            gr.log.error(\"\
-      FSM app_in: length mismatch\"); return\n        with self._lock:\n         \
-      \   if self.state != IDLE:\n                gr.log.warn(\"FSM app_in: session\
-      \ active - dropping\"); return\n            self.dst_addr = dst_addr & 0xFF;\
-      \ self.dst_port = dst_port & 0xFF\n            self.media_code = type_byte &\
-      \ 0xFF\n            self._packetize(frame)\n            self.session_id   =\
-      \ int.from_bytes(os.urandom(8), \"big\")\n            self.state        = SYN_SENT;\
-      \ self.ctrl_retries = 0\n            self._emit_ctrl(PKT_SYN, total_pkts=self.total_tx,\
-      \ media=self.media_code)\n            self._start_timer(self.seq_space - 1)\n\
-      \n    def handle_pdu_in(self, msg):\n        if not pmt.is_pair(msg): return\n\
+      FSM: FIN retry limit exceeded\")\n                        self._notify(\"tx_done\"\
+      ); self._reset_state(); return\n                    gr.log.warn(f\"FSM: FIN\
+      \ RTO retry {self.ctrl_retries}/{self.max_retries}\")\n                    self._emit_ctrl(PKT_FIN)\n\
+      \                    self._start_timer(ctrl)\n                elif self.state\
+      \ in (SYN_RCVD, RX_ACTIVE):\n                    gr.log.warn(\"FSM: peer went\
+      \ silent - abandoning RX session\")\n                    self._reset_state()\n\
+      \            else:\n                if self.state == TX_ACTIVE and not self.acked[slot]\
+      \ and self.tx_buf[slot] is not None:\n                    self.data_retries[slot]\
+      \ += 1\n                    if self.data_retries[slot] > self.max_retries:\n\
+      \                        gr.log.error(f\"FSM: DATA retry limit exceeded slot={slot}\"\
+      )\n                        self._notify(\"tx_failed\"); self._reset_state();\
+      \ return\n                    gr.log.warn(f\"FSM: DATA RTO slot={slot}\")\n\
+      \                    self._emit_data(slot); self._start_timer(slot)\n\n    def\
+      \ handle_app_in(self, msg):\n        if not pmt.is_pair(msg): return\n     \
+      \   d = pmt.cdr(msg)\n        if not pmt.is_u8vector(d): return\n        frame\
+      \ = bytes(pmt.u8vector_elements(d))\n        if len(frame) < 8:\n          \
+      \  gr.log.error(\"FSM app_in: frame too short\"); return\n        dst_addr,\
+      \ dst_port, type_byte, _ = struct.unpack_from(\">BBBB\", frame, 0)\n       \
+      \ declared_len = struct.unpack_from(\">I\", frame, 4)[0]\n        if len(frame)\
+      \ != 8 + declared_len:\n            gr.log.error(\"FSM app_in: length mismatch\"\
+      ); return\n        with self._lock:\n            if self.state != IDLE:\n  \
+      \              gr.log.warn(\"FSM app_in: session active - dropping\")\n    \
+      \            self._notify(\"tx_busy\"); return\n            self.dst_addr =\
+      \ dst_addr & 0xFF; self.dst_port = dst_port & 0xFF\n            self.media_code\
+      \ = type_byte & 0xFF\n            self._packetize(frame)\n            self.session_id\
+      \   = int.from_bytes(os.urandom(8), \"big\")\n            self.state       \
+      \ = SYN_SENT; self.ctrl_retries = 0\n            self._emit_ctrl(PKT_SYN, total_pkts=self.total_tx,\
+      \ media=self.media_code)\n            self._start_timer(self.seq_space)\n\n\
+      \    def handle_pdu_in(self, msg):\n        if not pmt.is_pair(msg): return\n\
       \        meta = pmt.car(msg); data = pmt.cdr(msg)\n        if not pmt.is_dict(meta):\
       \ return\n        if not pmt.dict_has_key(meta, pmt.intern(\"pkt_type\")): return\n\
       \        pkt_str  = pmt.symbol_to_string(\n            pmt.dict_ref(meta, pmt.intern(\"\
@@ -1091,23 +1121,32 @@ blocks:
       \     SYN_RCVD:self._fsm_syn_rcvd, TX_ACTIVE:self._fsm_tx_active,\n        \
       \                RX_ACTIVE:self._fsm_rx_active, FIN_SENT:self._fsm_fin_sent}\n\
       \            if self.state in dispatch:\n                dispatch[self.state](hdr,\
-      \ payload)\n\n    def _fsm_idle(self, hdr, payload):\n        if hdr[\"pkt_type\"\
-      ] != PKT_SYN: return\n        dst = hdr[\"dst_addr\"]\n        if self.local_addr\
-      \ != 0 and dst != 0 and dst != self.local_addr: return\n        if self.local_port\
-      \ != 0 and hdr[\"dst_port\"] != 0 and hdr[\"dst_port\"] != self.local_port:\
-      \ return\n        self.dst_addr=hdr[\"src_addr\"]; self.dst_port=hdr[\"src_port\"\
-      ]\n        self.session_id=hdr[\"session_id\"]; self.total_rx=hdr[\"total_pkts\"\
-      ]\n        self.media_code=hdr[\"media_type\"]\n        self.rcv_base=0; self.pkts_delivered=0;\
-      \ self.reassembled=bytearray()\n        self.rx_buf=[None]*self.seq_space; self.received=[False]*self.seq_space\n\
+      \ payload)\n            if self.state in (SYN_RCVD, RX_ACTIVE):\n          \
+      \      self._start_timer(self.seq_space, self.rto_s * (self.max_retries + 2))\n\
+      \n    def _fsm_idle(self, hdr, payload):\n        if hdr[\"session_id\"] ==\
+      \ self.last_done_sid and hdr[\"pkt_type\"] in (PKT_DATA, PKT_FIN):\n       \
+      \     self.session_id = hdr[\"session_id\"]\n            self.dst_addr = hdr[\"\
+      src_addr\"]; self.dst_port = hdr[\"src_port\"]\n            if hdr[\"pkt_type\"\
+      ] == PKT_DATA: self._emit_ctrl(PKT_ACK, seq_no=hdr[\"seq_no\"])\n          \
+      \  else:                           self._emit_ctrl(PKT_FIN_ACK)\n          \
+      \  self.session_id = 0; self.dst_addr = 0; self.dst_port = 0\n            return\n\
+      \        if hdr[\"pkt_type\"] != PKT_SYN: return\n        dst = hdr[\"dst_addr\"\
+      ]\n        if self.local_addr != 0 and dst != 0 and dst != self.local_addr:\
+      \ return\n        if self.local_port != 0 and hdr[\"dst_port\"] != 0 and hdr[\"\
+      dst_port\"] != self.local_port: return\n        self.dst_addr=hdr[\"src_addr\"\
+      ]; self.dst_port=hdr[\"src_port\"]\n        self.session_id=hdr[\"session_id\"\
+      ]; self.total_rx=hdr[\"total_pkts\"]\n        self.media_code=hdr[\"media_type\"\
+      ]\n        self.rcv_base=0; self.pkts_delivered=0; self.reassembled=bytearray()\n\
+      \        self.rx_buf=[None]*self.seq_space; self.received=[False]*self.seq_space\n\
       \        self.state=SYN_RCVD; self._emit_ctrl(PKT_SYN_ACK)\n\n    def _fsm_syn_sent(self,\
       \ hdr, payload):\n        if hdr[\"pkt_type\"] != PKT_SYN_ACK: return\n    \
-      \    self._cancel_timer(self.seq_space - 1)\n        self.state=TX_ACTIVE; self.send_base=0;\
+      \    self._cancel_timer(self.seq_space)\n        self.state=TX_ACTIVE; self.send_base=0;\
       \ self.next_seq_abs=0\n        for _ in range(min(self.win_size, self.total_tx)):\n\
       \            slot=self.next_seq_abs % self.seq_space\n            self.tx_buf[slot]=self.all_tx_pkts[self.next_seq_abs];\
-      \ self.acked[slot]=False\n            self._emit_data(slot); self._start_timer(slot);\
-      \ self.next_seq_abs+=1\n\n    def _fsm_syn_rcvd(self, hdr, payload):\n     \
-      \   if hdr[\"pkt_type\"]==PKT_SYN: self._emit_ctrl(PKT_SYN_ACK); return\n  \
-      \      if hdr[\"pkt_type\"]==PKT_DATA: self.state=RX_ACTIVE; self._fsm_rx_active(hdr,\
+      \ self.acked[slot]=False; self.data_retries[slot]=0\n            self._emit_data(slot);\
+      \ self._start_timer(slot); self.next_seq_abs+=1\n\n    def _fsm_syn_rcvd(self,\
+      \ hdr, payload):\n        if hdr[\"pkt_type\"]==PKT_SYN: self._emit_ctrl(PKT_SYN_ACK);\
+      \ return\n        if hdr[\"pkt_type\"]==PKT_DATA: self.state=RX_ACTIVE; self._fsm_rx_active(hdr,\
       \ payload)\n\n    def _fsm_tx_active(self, hdr, payload):\n        if hdr[\"\
       pkt_type\"]!=PKT_ACK: return\n        seq=hdr[\"seq_no\"]\n        if self.acked[seq]:\
       \ return\n        self.acked[seq]=True; self._cancel_timer(seq); self._advance_window()\n\
@@ -1117,19 +1156,20 @@ blocks:
       \        if not in_win: return\n        if not self.received[seq]: self.received[seq]=True;\
       \ self.rx_buf[seq]=payload\n        self._try_deliver()\n\n    def _fsm_fin_sent(self,\
       \ hdr, payload):\n        if hdr[\"pkt_type\"]!=PKT_FIN_ACK: return\n      \
-      \  self._cancel_timer(self.seq_space-1); self._reset_state()\n\n    def _advance_window(self):\n\
-      \        while self.send_base < self.total_tx and self.acked[self.send_base\
-      \ % self.seq_space]:\n            slot=self.send_base%self.seq_space\n     \
-      \       self.acked[slot]=False; self.tx_buf[slot]=None; self.send_base+=1\n\
+      \  self._cancel_timer(self.seq_space); self._notify(\"tx_done\"); self._reset_state()\n\
+      \n    def _advance_window(self):\n        while self.send_base < self.total_tx\
+      \ and self.acked[self.send_base % self.seq_space]:\n            slot=self.send_base%self.seq_space\n\
+      \            self.acked[slot]=False; self.tx_buf[slot]=None; self.send_base+=1\n\
       \            if self.next_seq_abs < self.total_tx:\n                ns=self.next_seq_abs%self.seq_space\n\
-      \                self.tx_buf[ns]=self.all_tx_pkts[self.next_seq_abs]; self.acked[ns]=False\n\
-      \                self._emit_data(ns); self._start_timer(ns); self.next_seq_abs+=1\n\
-      \        if self.send_base >= self.total_tx:\n            self.state=FIN_SENT;\
-      \ self.ctrl_retries=0\n            self._emit_ctrl(PKT_FIN); self._start_timer(self.seq_space-1)\n\
-      \n    def _try_deliver(self):\n        while self.pkts_delivered < self.total_rx\
-      \ and self.received[self.rcv_base]:\n            self.reassembled.extend(self.rx_buf[self.rcv_base])\n\
-      \            self.received[self.rcv_base]=False; self.rx_buf[self.rcv_base]=None\n\
-      \            self.rcv_base=(self.rcv_base+1)%self.seq_space; self.pkts_delivered+=1\n\
+      \                self.tx_buf[ns]=self.all_tx_pkts[self.next_seq_abs]; self.acked[ns]=False;\
+      \ self.data_retries[ns]=0\n                self._emit_data(ns); self._start_timer(ns);\
+      \ self.next_seq_abs+=1\n        if self.send_base >= self.total_tx:\n      \
+      \      self.state=FIN_SENT; self.ctrl_retries=0\n            self._emit_ctrl(PKT_FIN);\
+      \ self._start_timer(self.seq_space)\n\n    def _try_deliver(self):\n       \
+      \ while self.pkts_delivered < self.total_rx and self.received[self.rcv_base]:\n\
+      \            self.reassembled.extend(self.rx_buf[self.rcv_base])\n         \
+      \   self.received[self.rcv_base]=False; self.rx_buf[self.rcv_base]=None\n  \
+      \          self.rcv_base=(self.rcv_base+1)%self.seq_space; self.pkts_delivered+=1\n\
       \        if self.pkts_delivered == self.total_rx:\n            out=bytes(self.reassembled)\n\
       \            m=pmt.make_dict()\n            for k,v in [(\"payload_type\",pmt.intern(MEDIA_STR.get(self.media_code,\"\
       unknown\"))),\n                        (\"session_id\",pmt.from_uint64(self.session_id)),\n\
@@ -1139,21 +1179,29 @@ blocks:
       \                    (\"dst_port\",pmt.from_uint64(self.local_port))]:\n   \
       \             m=pmt.dict_add(m, pmt.intern(k), v)\n            self.message_port_pub(pmt.intern(\"\
       app_out\"),\n                pmt.cons(m, pmt.init_u8vector(len(out), list(out))))\n\
-      \            self._emit_ctrl(PKT_FIN_ACK); self._reset_state()\n\n    def _packetize(self,\
-      \ raw):\n        self.all_tx_pkts=[raw[i:i+self.mtu] for i in range(0,len(raw),self.mtu)]\n\
-      \        self.tx_buf=[None]*self.seq_space; self.acked=[False]*self.seq_space\n\
-      \        self.total_tx=len(self.all_tx_pkts); self.send_base=0; self.next_seq_abs=0\n\
-      \n    def _make_meta(self, pkt_code, seq_no=0, total_pkts=0, media=0):\n   \
-      \     m=pmt.make_dict()\n        for k,v in [(\"pkt_type\",pmt.intern(PKT_STR.get(pkt_code,\"\
-      UNKNOWN\"))),\n                    (\"pkt_type_raw\",pmt.from_uint64(pkt_code)),\n\
-      \                    (\"seq_no\",pmt.from_uint64(seq_no)),\n               \
-      \     (\"total_pkts\",pmt.from_uint64(total_pkts)),\n                    (\"\
-      media_type\",pmt.intern(MEDIA_STR.get(media,\"unknown\"))),\n              \
-      \      (\"media_raw\",pmt.from_uint64(media)),\n                    (\"src_addr\"\
-      ,pmt.from_uint64(self.local_addr)),\n                    (\"src_port\",pmt.from_uint64(self.local_port)),\n\
-      \                    (\"dst_addr\",pmt.from_uint64(self.dst_addr)),\n      \
-      \              (\"dst_port\",pmt.from_uint64(self.dst_port)),\n            \
-      \        (\"session_id\",pmt.from_uint64(self.session_id))]:\n            m=pmt.dict_add(m,\
+      \            self._emit_ctrl(PKT_FIN_ACK)\n            self.last_done_sid =\
+      \ self.session_id\n            self._reset_state()\n\n    def _notify(self,\
+      \ event):\n        m = pmt.dict_add(pmt.make_dict(), pmt.intern(\"event\"),\
+      \ pmt.intern(event))\n        m = pmt.dict_add(m, pmt.intern(\"session_id\"\
+      ), pmt.from_uint64(self.session_id))\n        # 1-byte dummy payload: an EMPTY\
+      \ u8vector crashes the C++ ZMQ sink's serializer\n        # on distros built\
+      \ with _GLIBCXX_ASSERTIONS (Fedora): \"Assertion '__n < this->size()'\"\n  \
+      \      self.message_port_pub(pmt.intern(\"app_out\"), pmt.cons(m, pmt.init_u8vector(1,\
+      \ [0])))\n\n    def _packetize(self, raw):\n        self.all_tx_pkts=[raw[i:i+self.mtu]\
+      \ for i in range(0,len(raw),self.mtu)]\n        self.tx_buf=[None]*self.seq_space;\
+      \ self.acked=[False]*self.seq_space\n        self.total_tx=len(self.all_tx_pkts);\
+      \ self.send_base=0; self.next_seq_abs=0\n\n    def _make_meta(self, pkt_code,\
+      \ seq_no=0, total_pkts=0, media=0):\n        m=pmt.make_dict()\n        for\
+      \ k,v in [(\"pkt_type\",pmt.intern(PKT_STR.get(pkt_code,\"UNKNOWN\"))),\n  \
+      \                  (\"pkt_type_raw\",pmt.from_uint64(pkt_code)),\n         \
+      \           (\"seq_no\",pmt.from_uint64(seq_no)),\n                    (\"total_pkts\"\
+      ,pmt.from_uint64(total_pkts)),\n                    (\"media_type\",pmt.intern(MEDIA_STR.get(media,\"\
+      unknown\"))),\n                    (\"media_raw\",pmt.from_uint64(media)),\n\
+      \                    (\"src_addr\",pmt.from_uint64(self.local_addr)),\n    \
+      \                (\"src_port\",pmt.from_uint64(self.local_port)),\n        \
+      \            (\"dst_addr\",pmt.from_uint64(self.dst_addr)),\n              \
+      \      (\"dst_port\",pmt.from_uint64(self.dst_port)),\n                    (\"\
+      session_id\",pmt.from_uint64(self.session_id))]:\n            m=pmt.dict_add(m,\
       \ pmt.intern(k), v)\n        return m\n\n    def _emit_ctrl(self, pkt_code,\
       \ seq_no=0, total_pkts=0, media=None):\n        if media is None: media=self.media_code\n\
       \        meta=self._make_meta(pkt_code, seq_no=seq_no, total_pkts=total_pkts,\

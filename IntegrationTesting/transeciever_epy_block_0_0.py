@@ -2,7 +2,8 @@
 Embedded Python Block: Burst Packet Framer TX
 - Outputs packed byte PDUs directly to pdu_pdu_to_tagged_stream
 - Zero idle transmission (idle between bursts = complete silence)
-- Zero postamble / trailing idle
+- Postamble: postamble_len zero bytes after the CRC, so the last real bytes are
+  pushed out of the Pluto sink buffer / RX filters (deframer ignores them)
 - Frame layout: [preamble] [1A CF FC 1D] [len: 2B][dest_id: 1B][msg_id: 1B][rep: 1B][n_reps: 1B] [payload] [CRC32: 4B]
 - CRC32 covers header + payload
 """
@@ -14,7 +15,8 @@ SYNC_WORD = bytes([0x1A, 0xCF, 0xFC, 0x1D])
 
 
 class PacketFramerTX(gr.basic_block):
-    def __init__(self, peer_id=1, preamble_len=64, repeat_count=5, max_payload_len=1024, preamble_byte=0xFF):
+    def __init__(self, peer_id=1, preamble_len=64, repeat_count=5, max_payload_len=1024, preamble_byte=0xFF,
+                 postamble_len=160):
         gr.basic_block.__init__(
             self,
             name="Packet Framer TX (Burst)",
@@ -26,6 +28,7 @@ class PacketFramerTX(gr.basic_block):
         self.repeat_count = int(repeat_count)
         self.max_payload_len = int(max_payload_len)
         self.preamble_byte = int(preamble_byte) & 0xFF
+        self.postamble_len = max(0, int(postamble_len))
         self._msg_id = 0
 
         self.message_port_register_in(pmt.intern("msg_in"))
@@ -65,12 +68,12 @@ class PacketFramerTX(gr.basic_block):
         n_reps = max(1, min(255, self.repeat_count))
 
         preamble = bytes([self.preamble_byte]) * self.preamble_len
-        print(f"[TX] msg #{msg_id} (to peer {self.peer_id}): '{payload.decode('utf-8', 'replace')}' ({n_reps} bursts queued)", flush=True)
+        print(f"[TX] msg #{msg_id} (to peer {self.peer_id}): {len(payload)} B payload ({n_reps} bursts queued)", flush=True)
 
         for rep in range(n_reps):
             header = len(payload).to_bytes(2, "big") + bytes([self.peer_id, msg_id, rep, n_reps])
             crc = zlib.crc32(header + payload).to_bytes(4, "big")
-            frame = preamble + SYNC_WORD + header + payload + crc
+            frame = preamble + SYNC_WORD + header + payload + crc + bytes(self.postamble_len)
 
             vec = pmt.init_u8vector(len(frame), list(frame))
             self.message_port_pub(pmt.intern("pdu_out"), pmt.cons(pmt.PMT_NIL, vec))

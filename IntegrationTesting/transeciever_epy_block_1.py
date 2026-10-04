@@ -1,3 +1,5 @@
+# SR-ARQ FSM Core - patched: fixes A-E from INTEGRATION_NOTES.md (control timer slot,
+# post-session re-ACK, RX inactivity timeout, DATA retry cap, tx_done/tx_failed/tx_busy events)
 import os, struct, threading
 import pmt
 from gnuradio import gr
@@ -49,7 +51,8 @@ class blk(gr.sync_block):
         self.set_msg_handler(pmt.intern("pdu_in"), self.handle_pdu_in)
         self.set_msg_handler(pmt.intern("app_in"), self.handle_app_in)
         self._lock   = threading.Lock()
-        self._timers = [None] * self.seq_space
+        self._timers = [None] * (self.seq_space + 1)
+        self.last_done_sid = None
         self._reset_state()
 
     def _reset_state(self):
@@ -60,15 +63,16 @@ class blk(gr.sync_block):
         self.all_tx_pkts  = []
         self.tx_buf   = [None]  * self.seq_space
         self.acked    = [False] * self.seq_space
+        self.data_retries = [0] * self.seq_space
         self.send_base = 0; self.next_seq_abs = 0; self.total_tx = 0
         self.rx_buf         = [None]  * self.seq_space
         self.received       = [False] * self.seq_space
         self.rcv_base = 0; self.total_rx = 0
         self.pkts_delivered = 0; self.reassembled = bytearray()
 
-    def _start_timer(self, slot):
+    def _start_timer(self, slot, timeout=None):
         self._cancel_timer(slot)
-        t = threading.Timer(self.rto_s, self._on_timeout, args=[slot])
+        t = threading.Timer(timeout or self.rto_s, self._on_timeout, args=[slot])
         t.daemon = True; self._timers[slot] = t; t.start()
 
     def _cancel_timer(self, slot):
@@ -80,14 +84,14 @@ class blk(gr.sync_block):
         for i in range(len(self._timers)): self._cancel_timer(i)
 
     def _on_timeout(self, slot):
-        ctrl = self.seq_space - 1
+        ctrl = self.seq_space
         with self._lock:
             if slot == ctrl:
                 if self.state == SYN_SENT:
                     self.ctrl_retries += 1
                     if self.ctrl_retries > self.max_retries:
                         gr.log.error("FSM: SYN retry limit exceeded")
-                        self._reset_state(); return
+                        self._notify("tx_failed"); self._reset_state(); return
                     gr.log.warn(f"FSM: SYN RTO retry {self.ctrl_retries}/{self.max_retries}")
                     self._emit_ctrl(PKT_SYN, total_pkts=self.total_tx, media=self.media_code)
                     self._start_timer(ctrl)
@@ -95,12 +99,19 @@ class blk(gr.sync_block):
                     self.ctrl_retries += 1
                     if self.ctrl_retries > self.max_retries:
                         gr.log.warn("FSM: FIN retry limit exceeded")
-                        self._reset_state(); return
+                        self._notify("tx_done"); self._reset_state(); return
                     gr.log.warn(f"FSM: FIN RTO retry {self.ctrl_retries}/{self.max_retries}")
                     self._emit_ctrl(PKT_FIN)
                     self._start_timer(ctrl)
+                elif self.state in (SYN_RCVD, RX_ACTIVE):
+                    gr.log.warn("FSM: peer went silent - abandoning RX session")
+                    self._reset_state()
             else:
-                if self.state == TX_ACTIVE and not self.acked[slot]:
+                if self.state == TX_ACTIVE and not self.acked[slot] and self.tx_buf[slot] is not None:
+                    self.data_retries[slot] += 1
+                    if self.data_retries[slot] > self.max_retries:
+                        gr.log.error(f"FSM: DATA retry limit exceeded slot={slot}")
+                        self._notify("tx_failed"); self._reset_state(); return
                     gr.log.warn(f"FSM: DATA RTO slot={slot}")
                     self._emit_data(slot); self._start_timer(slot)
 
@@ -117,14 +128,15 @@ class blk(gr.sync_block):
             gr.log.error("FSM app_in: length mismatch"); return
         with self._lock:
             if self.state != IDLE:
-                gr.log.warn("FSM app_in: session active - dropping"); return
+                gr.log.warn("FSM app_in: session active - dropping")
+                self._notify("tx_busy"); return
             self.dst_addr = dst_addr & 0xFF; self.dst_port = dst_port & 0xFF
             self.media_code = type_byte & 0xFF
             self._packetize(frame)
             self.session_id   = int.from_bytes(os.urandom(8), "big")
             self.state        = SYN_SENT; self.ctrl_retries = 0
             self._emit_ctrl(PKT_SYN, total_pkts=self.total_tx, media=self.media_code)
-            self._start_timer(self.seq_space - 1)
+            self._start_timer(self.seq_space)
 
     def handle_pdu_in(self, msg):
         if not pmt.is_pair(msg): return
@@ -154,8 +166,17 @@ class blk(gr.sync_block):
                         RX_ACTIVE:self._fsm_rx_active, FIN_SENT:self._fsm_fin_sent}
             if self.state in dispatch:
                 dispatch[self.state](hdr, payload)
+            if self.state in (SYN_RCVD, RX_ACTIVE):
+                self._start_timer(self.seq_space, self.rto_s * (self.max_retries + 2))
 
     def _fsm_idle(self, hdr, payload):
+        if hdr["session_id"] == self.last_done_sid and hdr["pkt_type"] in (PKT_DATA, PKT_FIN):
+            self.session_id = hdr["session_id"]
+            self.dst_addr = hdr["src_addr"]; self.dst_port = hdr["src_port"]
+            if hdr["pkt_type"] == PKT_DATA: self._emit_ctrl(PKT_ACK, seq_no=hdr["seq_no"])
+            else:                           self._emit_ctrl(PKT_FIN_ACK)
+            self.session_id = 0; self.dst_addr = 0; self.dst_port = 0
+            return
         if hdr["pkt_type"] != PKT_SYN: return
         dst = hdr["dst_addr"]
         if self.local_addr != 0 and dst != 0 and dst != self.local_addr: return
@@ -169,11 +190,11 @@ class blk(gr.sync_block):
 
     def _fsm_syn_sent(self, hdr, payload):
         if hdr["pkt_type"] != PKT_SYN_ACK: return
-        self._cancel_timer(self.seq_space - 1)
+        self._cancel_timer(self.seq_space)
         self.state=TX_ACTIVE; self.send_base=0; self.next_seq_abs=0
         for _ in range(min(self.win_size, self.total_tx)):
             slot=self.next_seq_abs % self.seq_space
-            self.tx_buf[slot]=self.all_tx_pkts[self.next_seq_abs]; self.acked[slot]=False
+            self.tx_buf[slot]=self.all_tx_pkts[self.next_seq_abs]; self.acked[slot]=False; self.data_retries[slot]=0
             self._emit_data(slot); self._start_timer(slot); self.next_seq_abs+=1
 
     def _fsm_syn_rcvd(self, hdr, payload):
@@ -197,7 +218,7 @@ class blk(gr.sync_block):
 
     def _fsm_fin_sent(self, hdr, payload):
         if hdr["pkt_type"]!=PKT_FIN_ACK: return
-        self._cancel_timer(self.seq_space-1); self._reset_state()
+        self._cancel_timer(self.seq_space); self._notify("tx_done"); self._reset_state()
 
     def _advance_window(self):
         while self.send_base < self.total_tx and self.acked[self.send_base % self.seq_space]:
@@ -205,11 +226,11 @@ class blk(gr.sync_block):
             self.acked[slot]=False; self.tx_buf[slot]=None; self.send_base+=1
             if self.next_seq_abs < self.total_tx:
                 ns=self.next_seq_abs%self.seq_space
-                self.tx_buf[ns]=self.all_tx_pkts[self.next_seq_abs]; self.acked[ns]=False
+                self.tx_buf[ns]=self.all_tx_pkts[self.next_seq_abs]; self.acked[ns]=False; self.data_retries[ns]=0
                 self._emit_data(ns); self._start_timer(ns); self.next_seq_abs+=1
         if self.send_base >= self.total_tx:
             self.state=FIN_SENT; self.ctrl_retries=0
-            self._emit_ctrl(PKT_FIN); self._start_timer(self.seq_space-1)
+            self._emit_ctrl(PKT_FIN); self._start_timer(self.seq_space)
 
     def _try_deliver(self):
         while self.pkts_delivered < self.total_rx and self.received[self.rcv_base]:
@@ -228,7 +249,16 @@ class blk(gr.sync_block):
                 m=pmt.dict_add(m, pmt.intern(k), v)
             self.message_port_pub(pmt.intern("app_out"),
                 pmt.cons(m, pmt.init_u8vector(len(out), list(out))))
-            self._emit_ctrl(PKT_FIN_ACK); self._reset_state()
+            self._emit_ctrl(PKT_FIN_ACK)
+            self.last_done_sid = self.session_id
+            self._reset_state()
+
+    def _notify(self, event):
+        m = pmt.dict_add(pmt.make_dict(), pmt.intern("event"), pmt.intern(event))
+        m = pmt.dict_add(m, pmt.intern("session_id"), pmt.from_uint64(self.session_id))
+        # 1-byte dummy payload: an EMPTY u8vector crashes the C++ ZMQ sink's serializer
+        # on distros built with _GLIBCXX_ASSERTIONS (Fedora): "Assertion '__n < this->size()'"
+        self.message_port_pub(pmt.intern("app_out"), pmt.cons(m, pmt.init_u8vector(1, [0])))
 
     def _packetize(self, raw):
         self.all_tx_pkts=[raw[i:i+self.mtu] for i in range(0,len(raw),self.mtu)]

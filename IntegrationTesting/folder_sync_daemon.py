@@ -154,6 +154,7 @@ class Daemon:
         self.status_file = a.root / ".daemon_status.json"
         self.rx_log = a.root / ".rx_log.jsonl"
         self._last_status = 0
+        self._status_lock = threading.Lock()
         self._link_err = None
 
     # -- destination ------------------------------------------------------
@@ -175,7 +176,18 @@ class Daemon:
                 peer, port = self.a.peer, self.a.port
         return peer, port
 
+    def heartbeat_loop(self):
+        # separate thread: send_file() can block for 15 s+ waiting for the FSM, and the
+        # chat app treats a heartbeat older than 8 s as "daemon not detected"
+        while not self.stop:
+            self.write_status()
+            time.sleep(1.0)
+
     def write_status(self, force=False):
+        with self._status_lock:
+            self._write_status(force)
+
+    def _write_status(self, force):
         now = time.time()
         if not force and now - self._last_status < 2:
             return
@@ -312,6 +324,7 @@ class Daemon:
 
     def run(self):
         threading.Thread(target=self.rx_loop, daemon=True).start()
+        threading.Thread(target=self.heartbeat_loop, daemon=True).start()
         peer, port = self.current_link()
         log(f"folder_sync_daemon: outbox={self.outbox}  inbox={self.inbox}")
         log(f"this node addr={self.a.local_addr}  ->  sending to addr={peer} port={port}"
