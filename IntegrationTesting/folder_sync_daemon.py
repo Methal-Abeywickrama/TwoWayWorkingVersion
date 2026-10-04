@@ -24,10 +24,17 @@ Destination: every file goes to ONE transport address/port (the "link"):
                      before every file, so it changes the destination without a
                      restart (cdp_chat.py's "Link" button writes it).
 
+Retry policy (one message = one bounded attempt):
+    - the FSM itself retries SYN / each DATA packet TL_MAX_RETRIES times (default 10);
+      if that fails the message goes straight to outbox/failed/  (--max-attempts 1)
+    - while the FSM is busy with another session ("tx_busy") the message waits, but
+      only up to --max-age seconds in total (TL_MSG_MAX_AGE, default 60)
+    - "no answer from the flowgraph" also counts as a failed attempt
+
 Old messages are never resent automatically:
     - at startup, anything still queued in outbox/ from a previous run is moved to
       outbox/failed/  (use --keep-queue to send it instead)
-    - a queued file older than --max-age seconds (TL_MSG_MAX_AGE, default 120) is
+    - a queued file older than --max-age seconds (TL_MSG_MAX_AGE, default 60) is
       moved to outbox/failed/ instead of being sent
     cdp_chat.py shows these as "not delivered" with a retry link (retry = fresh age).
 
@@ -39,6 +46,8 @@ Environment variables (same names the flowgraph reads, so one export sets both):
     TL_LOCAL_ADDR    this node's address (shown in status only)
     TL_ZMQ_TX_PORT   default 52001
     TL_ZMQ_RX_PORT   default 52002
+    TL_RTO_MS        default 500   FSM retransmit timeout - used to size how long to wait
+    TL_MAX_RETRIES   default 10    FSM retries per packet  - for the FSM's result
     TL_MTU           default 200   (only used for time estimates)
     TL_PREAMBLE      default 1024  (only used for time estimates)
 
@@ -291,14 +300,27 @@ class Daemon:
             log(f"[TX] cleared {moved} message(s) left in outbox/ from a previous run -> outbox/failed/ "
                 "(use --keep-queue to send them instead)")
 
+    def _fail(self, p, why):
+        log(f"[TX] {p.name}: {why} - moved to failed/")
+        self.attempts.pop(p.name, None)
+        p.replace(unique_path(self.failed, p.name))
+
+    def _attempt_failed(self, p, why):
+        self.attempts[p.name] = self.attempts.get(p.name, 0) + 1
+        if self.attempts[p.name] >= self.a.max_attempts:
+            self._fail(p, f"{why} (attempt {self.attempts[p.name]}/{self.a.max_attempts})")
+            return
+        back = random.uniform(2, 8)          # random back-off avoids both nodes colliding again
+        log(f"[TX] {p.name}: {why} - retry {self.attempts[p.name]}/{self.a.max_attempts} in {back:.1f} s")
+        time.sleep(back)
+
     def send_file(self, p):
         try:
             age = time.time() - p.stat().st_mtime
         except OSError:
             return
         if self.a.max_age > 0 and age > self.a.max_age:
-            log(f"[TX] {p.name}: waited {age:.0f} s (> {self.a.max_age:.0f} s) - expired, moved to failed/")
-            p.replace(unique_path(self.failed, p.name))
+            self._fail(p, f"waited {age:.0f} s (> {self.a.max_age:.0f} s) without being delivered")
             return
         data = p.read_bytes()
         peer, port = self.current_link()
@@ -319,27 +341,26 @@ class Daemon:
             return
         log(f"[TX] {p.name}: {len(data)} B -> addr {peer} port {port}, {n_pkts} packets, ~{air:.1f} s air time minimum")
 
-        # Generous: air time x3 for ACKs/retransmissions + handshake slack
-        timeout = 3 * air + 15
+        # Wait as long as the FSM can possibly take: it always ends with tx_done/tx_failed.
+        # Worst case: SYN phase, every DATA window, and the FIN phase each use all retries.
+        rto = self.a.rto_ms / 1000.0
+        windows = -(-n_pkts // 8)                        # SR window = 8 packets (TL_M=4)
+        timeout = (self.a.fsm_retries + 2) * rto * (2 + windows) + 3 * air + 10
         ev = self.wait_event(timeout)
         if ev == "tx_done":
             log(f"[TX] {p.name}: delivered")
+            self.attempts.pop(p.name, None)
             p.replace(unique_path(self.sent, p.name))
         elif ev == "tx_busy":
-            back = random.uniform(2, 6)
-            log(f"[TX] {p.name}: transport layer busy (a session is in progress) - retry in {back:.1f} s")
+            # not an attempt: the FSM is busy with another session. Bounded by --max-age.
+            back = random.uniform(1, 3)
+            log(f"[TX] {p.name}: transport layer busy (another session in progress) - waiting {back:.1f} s")
             time.sleep(back)
         elif ev == "tx_failed":
-            self.attempts[p.name] = self.attempts.get(p.name, 0) + 1
-            if self.attempts[p.name] >= self.a.max_attempts:
-                log(f"[TX] {p.name}: failed {self.attempts[p.name]} times - moved to failed/")
-                p.replace(unique_path(self.failed, p.name))
-            else:
-                back = random.uniform(2, 8)          # random back-off avoids both nodes colliding again
-                log(f"[TX] {p.name}: peer did not answer - retry {self.attempts[p.name]}/{self.a.max_attempts} in {back:.1f} s")
-                time.sleep(back)
-        elif self.events_seen:
-            log(f"[TX] {p.name}: no completion after {timeout:.0f} s - leaving it in outbox to retry")
+            self._attempt_failed(p, "peer did not answer (FSM retries exhausted)")
+        elif self.events_seen or self.a.assume_events:
+            self._attempt_failed(p, f"no result from the flowgraph after {timeout:.0f} s "
+                                    "(is it running? are TL_RTO_MS/TL_MAX_RETRIES the same as the flowgraph's?)")
         else:
             # The FSM in this flowgraph does not report completion (event patch not applied):
             # we cannot know whether it arrived. Park it so we don't resend forever.
@@ -394,8 +415,16 @@ def main():
     ap.add_argument("--rx-port", type=int, default=int(env("TL_ZMQ_RX_PORT", "52002")))
     ap.add_argument("--mtu", type=int, default=int(env("TL_MTU", "200")))
     ap.add_argument("--preamble", type=int, default=int(env("TL_PREAMBLE", "1024")))
-    ap.add_argument("--max-attempts", type=int, default=3)
-    ap.add_argument("--max-age", type=float, default=float(env("TL_MSG_MAX_AGE", "120")),
+    ap.add_argument("--rto-ms", type=float, default=float(env("TL_RTO_MS", "500")),
+                    help="the flowgraph's FSM RTO (TL_RTO_MS) - sizes the wait for tx_done/tx_failed")
+    ap.add_argument("--fsm-retries", type=int, default=int(env("TL_MAX_RETRIES", "10")),
+                    help="the flowgraph's FSM retries (TL_MAX_RETRIES)")
+    ap.add_argument("--legacy-fsm", dest="assume_events", action="store_false",
+                    help="FSM without tx_done/tx_failed events: park unconfirmed sends instead of failing them")
+    ap.add_argument("--max-attempts", type=int, default=int(env("TL_MSG_ATTEMPTS", "1")),
+                    help="FSM sessions per message before giving up (TL_MSG_ATTEMPTS, default 1; "
+                         "each session already retries TL_MAX_RETRIES times)")
+    ap.add_argument("--max-age", type=float, default=float(env("TL_MSG_MAX_AGE", "60")),
                     help="seconds a queued file may wait before it is moved to failed/ (0 = never)")
     ap.add_argument("--keep-queue", action="store_true",
                     help="send files left in outbox/ from a previous run instead of clearing them")

@@ -11,8 +11,10 @@
 
 from PyQt5 import Qt
 from gnuradio import qtgui
+from PyQt5 import QtCore
 from gnuradio import analog
 from gnuradio import blocks
+from gnuradio import blocks, gr
 from gnuradio import digital
 from gnuradio import filter
 from gnuradio.filter import firdes
@@ -91,6 +93,7 @@ class transeciever(gr.top_block, Qt.QWidget):
         self.sym_bw = sym_bw = 0.020
         self.sps = sps = 4
         self.samp_rate = samp_rate = 1.5e6
+        self.power_threshold = power_threshold = -25
         self.fll_loop_bw = fll_loop_bw = 0.01
         self.costas_bw = costas_bw = 0.02
         self.alpha = alpha = 0.35
@@ -106,6 +109,9 @@ class transeciever(gr.top_block, Qt.QWidget):
         # Blocks
         ##################################################
 
+        self._power_threshold_range = qtgui.Range(-100, 0, 1, -25, 200)
+        self._power_threshold_win = qtgui.RangeWidget(self._power_threshold_range, self.set_power_threshold, "'power_threshold'", "counter_slider", float, QtCore.Qt.Horizontal)
+        self.top_layout.addWidget(self._power_threshold_win)
         self.zeromq_push_msg_sink_0 = zeromq.push_msg_sink("tcp://127.0.0.1:" + str(tl_zmq_rx_port), 100, True)
         self.zeromq_pull_msg_source_0 = zeromq.pull_msg_source("tcp://127.0.0.1:" + str(tl_zmq_tx_port), 100, True)
         self.root_raised_cosine_filter_0 = filter.fir_filter_ccf(
@@ -280,7 +286,7 @@ class transeciever(gr.top_block, Qt.QWidget):
         self.pdu_pdu_filter_0 = pdu.pdu_filter(pmt.intern("dst_addr"), pmt.from_uint64(tl_local_addr), False)
         self.iio_pluto_source_0 = iio.fmcomms2_source_fc32(ADDR if ADDR else iio.get_pluto_uri(), [True, True], 4096)
         self.iio_pluto_source_0.set_len_tag_key('packet_len')
-        self.iio_pluto_source_0.set_frequency(int(733e6))
+        self.iio_pluto_source_0.set_frequency(int(900e6))
         self.iio_pluto_source_0.set_samplerate(int(samp_rate))
         self.iio_pluto_source_0.set_gain_mode(0, 'slow_attack')
         self.iio_pluto_source_0.set_gain(0, 64)
@@ -288,17 +294,17 @@ class transeciever(gr.top_block, Qt.QWidget):
         self.iio_pluto_source_0.set_rfdc(True)
         self.iio_pluto_source_0.set_bbdc(True)
         self.iio_pluto_source_0.set_filter_params('Auto', '', 0, 0)
-        self.iio_pluto_sink_0_0 = iio.fmcomms2_sink_fc32(ADDR if ADDR else iio.get_pluto_uri(), [True, True], 4096, False)
+        self.iio_pluto_sink_0_0 = iio.fmcomms2_sink_fc32(ADDR if ADDR else iio.get_pluto_uri(), [True, True], 33440, False)
         self.iio_pluto_sink_0_0.set_len_tag_key('')
         self.iio_pluto_sink_0_0.set_bandwidth(20000000)
-        self.iio_pluto_sink_0_0.set_frequency(int(500e6))
+        self.iio_pluto_sink_0_0.set_frequency(int(733e6))
         self.iio_pluto_sink_0_0.set_samplerate(int(samp_rate))
         self.iio_pluto_sink_0_0.set_attenuation(0, CH_GAIN)
         self.iio_pluto_sink_0_0.set_filter_params('Auto', '', 0, 0)
         self.epy_block_2 = epy_block_2.blk()
         self.epy_block_1 = epy_block_1.blk(m=tl_m, rto_ms=tl_rto_ms, node_role=tl_role, mtu_bytes=tl_mtu, local_addr=tl_local_addr, local_port=tl_local_port, max_retries=tl_max_retries)
         self.epy_block_0_0_0 = epy_block_0_0_0.PacketDeframerRX(peer_id=tl_local_addr, max_bit_errors=1, max_payload_len=8192, bit_rate=375000)
-        self.epy_block_0_0 = epy_block_0_0.PacketFramerTX(peer_id=tl_peer_addr, preamble_len=1024, repeat_count=1, max_payload_len=8196, preamble_byte=0xFF, postamble_len=160)
+        self.epy_block_0_0 = epy_block_0_0.PacketFramerTX(peer_id=tl_peer_addr, preamble_len=512, repeat_count=5, max_payload_len=8196, preamble_byte=0xFF, postamble_len=160)
         self.epy_block_0 = epy_block_0.blk()
         self.digital_symbol_sync_xx_0 = digital.symbol_sync_cc(
             digital.TED_SIGNAL_TIMES_SLOPE_ML,
@@ -329,18 +335,21 @@ class transeciever(gr.top_block, Qt.QWidget):
         self.blocks_unpack_k_bits_bb_0_0 = blocks.unpack_k_bits_bb(1)
         self.blocks_tag_gate_0_0 = blocks.tag_gate(gr.sizeof_gr_complex * 1, False)
         self.blocks_tag_gate_0_0.set_single_key("")
+        self.blocks_message_debug_2 = blocks.message_debug(True, gr.log_levels.info)
         self.blocks_copy_1_2 = blocks.copy(gr.sizeof_gr_complex*1)
         self.blocks_copy_1_2.set_enabled(True)
         self.blocks_copy_1_1 = blocks.copy(gr.sizeof_gr_complex*1)
         self.blocks_copy_1_1.set_enabled(True)
         self.blocks_copy_0_0 = blocks.copy(gr.sizeof_char*1)
         self.blocks_copy_0_0.set_enabled(True)
+        self.analog_pwr_squelch_xx_0 = analog.pwr_squelch_cc(power_threshold, (1e-4), 0, True)
         self.analog_agc_xx_0 = analog.agc_cc((1e-3), 1.0, 1.0, 1000)
 
 
         ##################################################
         # Connections
         ##################################################
+        self.msg_connect((self.epy_block_0, 'pdus'), (self.blocks_message_debug_2, 'print_pdu'))
         self.msg_connect((self.epy_block_0, 'pdus'), (self.pdu_pdu_filter_0, 'pdus'))
         self.msg_connect((self.epy_block_0, 'pdus'), (self.pdu_pdu_filter_0_0, 'pdus'))
         self.msg_connect((self.epy_block_0_0, 'pdu_out'), (self.pdu_pdu_to_tagged_stream_0_0, 'pdus'))
@@ -351,7 +360,8 @@ class transeciever(gr.top_block, Qt.QWidget):
         self.msg_connect((self.pdu_pdu_filter_0, 'pdus'), (self.epy_block_1, 'pdu_in'))
         self.msg_connect((self.pdu_pdu_filter_0_0, 'pdus'), (self.epy_block_1, 'pdu_in'))
         self.msg_connect((self.zeromq_pull_msg_source_0, 'out'), (self.epy_block_1, 'app_in'))
-        self.connect((self.analog_agc_xx_0, 0), (self.digital_fll_band_edge_cc_0, 0))
+        self.connect((self.analog_agc_xx_0, 0), (self.analog_pwr_squelch_xx_0, 0))
+        self.connect((self.analog_pwr_squelch_xx_0, 0), (self.digital_fll_band_edge_cc_0, 0))
         self.connect((self.blocks_copy_0_0, 0), (self.digital_constellation_modulator_0_0_0, 0))
         self.connect((self.blocks_copy_1_1, 0), (self.analog_agc_xx_0, 0))
         self.connect((self.blocks_copy_1_2, 0), (self.root_raised_cosine_filter_0, 0))
@@ -481,6 +491,13 @@ class transeciever(gr.top_block, Qt.QWidget):
         self.qtgui_freq_sink_x_1.set_frequency_range(0, self.samp_rate)
         self.qtgui_waterfall_sink_x_0.set_frequency_range(733e6, self.samp_rate)
         self.root_raised_cosine_filter_0.set_taps(firdes.root_raised_cosine(1, self.samp_rate, (self.samp_rate/float(self.sps)), self.alpha, (11*self.sps+1)))
+
+    def get_power_threshold(self):
+        return self.power_threshold
+
+    def set_power_threshold(self, power_threshold):
+        self.power_threshold = power_threshold
+        self.analog_pwr_squelch_xx_0.set_threshold(self.power_threshold)
 
     def get_fll_loop_bw(self):
         return self.fll_loop_bw
