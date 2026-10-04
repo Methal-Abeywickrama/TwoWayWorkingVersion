@@ -24,6 +24,13 @@ Destination: every file goes to ONE transport address/port (the "link"):
                      before every file, so it changes the destination without a
                      restart (cdp_chat.py's "Link" button writes it).
 
+Old messages are never resent automatically:
+    - at startup, anything still queued in outbox/ from a previous run is moved to
+      outbox/failed/  (use --keep-queue to send it instead)
+    - a queued file older than --max-age seconds (TL_MSG_MAX_AGE, default 120) is
+      moved to outbox/failed/ instead of being sent
+    cdp_chat.py shows these as "not delivered" with a retry link (retry = fresh age).
+
 Files the daemon keeps in the root folder:
     .daemon_status.json   heartbeat + current settings (read by cdp_chat.py)
     .rx_log.jsonl         one line per received file: who sent it (src addr/port)
@@ -274,7 +281,25 @@ class Daemon:
                 self.ev_cond.wait(left)
             return self.events.pop(0)
 
+    def clear_stale_queue(self):
+        moved = 0
+        for p in sorted(self.outbox.iterdir()):
+            if p.is_file() and not p.name.startswith(".") and not p.name.endswith((".part", "~", ".tmp")):
+                p.replace(unique_path(self.failed, p.name))
+                moved += 1
+        if moved:
+            log(f"[TX] cleared {moved} message(s) left in outbox/ from a previous run -> outbox/failed/ "
+                "(use --keep-queue to send them instead)")
+
     def send_file(self, p):
+        try:
+            age = time.time() - p.stat().st_mtime
+        except OSError:
+            return
+        if self.a.max_age > 0 and age > self.a.max_age:
+            log(f"[TX] {p.name}: waited {age:.0f} s (> {self.a.max_age:.0f} s) - expired, moved to failed/")
+            p.replace(unique_path(self.failed, p.name))
+            return
         data = p.read_bytes()
         peer, port = self.current_link()
         frame = build_app_frame(peer, p.name, data, dst_port=port)
@@ -330,6 +355,8 @@ class Daemon:
         log(f"this node addr={self.a.local_addr}  ->  sending to addr={peer} port={port}"
             + ("  (from link.json)" if self.link_file.exists() else ""))
         log(f"ZMQ: sending to :{self.a.tx_port}, receiving from :{self.a.rx_port}")
+        if not self.a.keep_queue:
+            self.clear_stale_queue()
         seen, self.attempts = {}, {}
         try:
             while True:
@@ -368,6 +395,10 @@ def main():
     ap.add_argument("--mtu", type=int, default=int(env("TL_MTU", "200")))
     ap.add_argument("--preamble", type=int, default=int(env("TL_PREAMBLE", "1024")))
     ap.add_argument("--max-attempts", type=int, default=3)
+    ap.add_argument("--max-age", type=float, default=float(env("TL_MSG_MAX_AGE", "120")),
+                    help="seconds a queued file may wait before it is moved to failed/ (0 = never)")
+    ap.add_argument("--keep-queue", action="store_true",
+                    help="send files left in outbox/ from a previous run instead of clearing them")
     a = ap.parse_args()
     a.root = a.root.resolve()
     Daemon(a).run()

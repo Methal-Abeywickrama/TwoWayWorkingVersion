@@ -297,7 +297,9 @@ class ChatStore:
             return
         for p in [m.path] + ([Path(m.attachment["path"])] if m.attachment and m.attachment.get("path") else []):
             if p.parent in (self.failed, self.unconfirmed) and p.exists():
-                os.replace(p, self.outbox / p.name)
+                dst = self.outbox / p.name
+                os.replace(p, dst)
+                os.utime(dst)          # fresh age, so the daemon's --max-age doesn't expire it again
 
 
 def clean_channel(name):

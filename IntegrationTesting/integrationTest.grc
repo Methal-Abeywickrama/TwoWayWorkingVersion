@@ -478,7 +478,7 @@ blocks:
     bus_structure: null
     coordinate: [616, 2412.0]
     rotation: 0
-    state: enabled
+    state: disabled
 - name: blocks_message_debug_1
   id: blocks_message_debug
   parameters:
@@ -493,7 +493,7 @@ blocks:
     bus_structure: null
     coordinate: [1448, 1724.0]
     rotation: 0
-    state: enabled
+    state: disabled
 - name: blocks_skiphead_0
   id: blocks_skiphead
   parameters:
@@ -581,9 +581,9 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1056, 616.0]
+    coordinate: [1056, 608.0]
     rotation: 0
-    state: enabled
+    state: disabled
 - name: digital_constellation_decoder_cb_0
   id: digital_constellation_decoder_cb
   parameters:
@@ -894,7 +894,7 @@ blocks:
     max_payload_len: '8196'
     maxoutbuf: '0'
     minoutbuf: '0'
-    peer_id: '1'
+    peer_id: tl_peer_addr
     postamble_len: '160'
     preamble_byte: '0xFF'
     preamble_len: '1024'
@@ -993,11 +993,11 @@ blocks:
     alias: ''
     bit_rate: '375000'
     comment: ''
-    max_bit_errors: tl_peer_addr
+    max_bit_errors: '1'
     max_payload_len: '8192'
     maxoutbuf: '0'
     minoutbuf: '0'
-    peer_id: MY_ID
+    peer_id: tl_local_addr
   states:
     _io_cache: ('Packet Deframer RX (Fast Burst)', 'PacketDeframerRX', [('peer_id',
       '1'), ('max_bit_errors', '2'), ('max_payload_len', '1024'), ('bit_rate', '375000')],
@@ -1225,10 +1225,10 @@ blocks:
     node_role: tl_role
     rto_ms: tl_rto_ms
   states:
-    _io_cache: '(''SR-ARQ FSM Core'', ''blk'', [(''m'', ''4''), (''rto_ms'', ''500''),
+    _io_cache: '(''SR-ARQ FSM Core'', ''blk'', [(''m'', ''4''), (''rto_ms'', ''1500''),
       (''node_role'', "''initiator''"), (''mtu_bytes'', ''200''), (''local_addr'',
-      ''0''), (''local_port'', ''0''), (''max_retries'', ''10'')], [(''app_in'', ''message'',
-      1), (''pdu_in'', ''message'', 1)], [(''app_out'', ''message'', 1), (''pdu_out'',
+      ''2''), (''local_port'', ''0''), (''max_retries'', ''10'')], [(''pdu_in'', ''message'',
+      1), (''app_in'', ''message'', 1)], [(''app_out'', ''message'', 1), (''pdu_out'',
       ''message'', 1)], ''\nBlock 2: SR-ARQ FSM Core\nEnv vars: TL_M, TL_RTO_MS, TL_ROLE,
       TL_MTU, TL_LOCAL_ADDR,\n          TL_LOCAL_PORT, TL_MAX_RETRIES\n'', [''local_addr'',
       ''local_port'', ''m'', ''max_retries''])'
@@ -1305,7 +1305,7 @@ blocks:
     bus_structure: null
     coordinate: [1328, 340.0]
     rotation: 0
-    state: disabled
+    state: enabled
 - name: iio_pluto_source_0
   id: iio_pluto_source
   parameters:
@@ -1336,7 +1336,7 @@ blocks:
     bus_structure: null
     coordinate: [272, 712.0]
     rotation: 0
-    state: disabled
+    state: enabled
 - name: import_0
   id: import
   parameters:
@@ -1751,6 +1751,164 @@ blocks:
     coordinate: [2896, 688.0]
     rotation: 0
     state: enabled
+- name: qtgui_time_sink_x_0
+  id: qtgui_time_sink_x
+  parameters:
+    affinity: ''
+    alias: ''
+    alpha1: '1.0'
+    alpha10: '1.0'
+    alpha2: '1.0'
+    alpha3: '1.0'
+    alpha4: '1.0'
+    alpha5: '1.0'
+    alpha6: '1.0'
+    alpha7: '1.0'
+    alpha8: '1.0'
+    alpha9: '1.0'
+    autoscale: 'True'
+    axislabels: 'True'
+    color1: blue
+    color10: dark blue
+    color2: red
+    color3: green
+    color4: black
+    color5: cyan
+    color6: magenta
+    color7: yellow
+    color8: dark red
+    color9: dark green
+    comment: ''
+    ctrlpanel: 'False'
+    entags: 'True'
+    grid: 'False'
+    gui_hint: ''
+    label1: Signal 1
+    label10: Signal 10
+    label2: Signal 2
+    label3: Signal 3
+    label4: Signal 4
+    label5: Signal 5
+    label6: Signal 6
+    label7: Signal 7
+    label8: Signal 8
+    label9: Signal 9
+    legend: 'True'
+    marker1: '-1'
+    marker10: '-1'
+    marker2: '-1'
+    marker3: '-1'
+    marker4: '-1'
+    marker5: '-1'
+    marker6: '-1'
+    marker7: '-1'
+    marker8: '-1'
+    marker9: '-1'
+    name: '""'
+    nconnections: '1'
+    size: int(samp_rate*0.5)
+    srate: samp_rate
+    stemplot: 'False'
+    style1: '1'
+    style10: '1'
+    style2: '1'
+    style3: '1'
+    style4: '1'
+    style5: '1'
+    style6: '1'
+    style7: '1'
+    style8: '1'
+    style9: '1'
+    tr_chan: '0'
+    tr_delay: '0'
+    tr_level: '0.0'
+    tr_mode: qtgui.TRIG_MODE_FREE
+    tr_slope: qtgui.TRIG_SLOPE_POS
+    tr_tag: '""'
+    type: complex
+    update_time: '0.10'
+    width1: '1'
+    width10: '1'
+    width2: '1'
+    width3: '1'
+    width4: '1'
+    width5: '1'
+    width6: '1'
+    width7: '1'
+    width8: '1'
+    width9: '1'
+    ylabel: Amplitude
+    ymax: '1'
+    ymin: '-1'
+    yunit: '""'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1424, 648.0]
+    rotation: 0
+    state: disabled
+- name: qtgui_waterfall_sink_x_0
+  id: qtgui_waterfall_sink_x
+  parameters:
+    affinity: ''
+    alias: ''
+    alpha1: '1.0'
+    alpha10: '1.0'
+    alpha2: '1.0'
+    alpha3: '1.0'
+    alpha4: '1.0'
+    alpha5: '1.0'
+    alpha6: '1.0'
+    alpha7: '1.0'
+    alpha8: '1.0'
+    alpha9: '1.0'
+    axislabels: 'True'
+    bw: samp_rate
+    color1: '0'
+    color10: '0'
+    color2: '0'
+    color3: '0'
+    color4: '0'
+    color5: '0'
+    color6: '0'
+    color7: '0'
+    color8: '0'
+    color9: '0'
+    comment: ''
+    fc: 733e6
+    fftsize: '1024'
+    freqhalf: 'True'
+    grid: 'False'
+    gui_hint: ''
+    int_max: '10'
+    int_min: '-140'
+    label1: ''
+    label10: ''
+    label2: ''
+    label3: ''
+    label4: ''
+    label5: ''
+    label6: ''
+    label7: ''
+    label8: ''
+    label9: ''
+    legend: 'True'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    name: '""'
+    nconnections: '1'
+    showports: 'False'
+    type: complex
+    update_time: '0.10'
+    wintype: window.WIN_BLACKMAN_hARRIS
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [648, 1008.0]
+    rotation: 0
+    state: enabled
 - name: root_raised_cosine_filter_0
   id: root_raised_cosine_filter
   parameters:
@@ -1978,6 +2136,7 @@ connections:
 - [blocks_skiphead_0, '0', root_raised_cosine_filter_0, '0']
 - [blocks_tag_gate_0_0, '0', channels_channel_model_0, '0']
 - [blocks_tag_gate_0_0, '0', iio_pluto_sink_0_0, '0']
+- [blocks_tag_gate_0_0, '0', qtgui_time_sink_x_0, '0']
 - [blocks_tag_gate_0_0, '0', virtual_sink_5_0, '0']
 - [blocks_unpack_k_bits_bb_0, '0', virtual_sink_2, '0']
 - [blocks_unpack_k_bits_bb_0_0, '0', virtual_sink_2_0, '0']
@@ -2007,6 +2166,7 @@ connections:
 - [epy_block_2, pdus, blocks_message_debug_1, print_pdu]
 - [epy_block_2, pdus, epy_block_0_0, msg_in]
 - [iio_pluto_source_0, '0', blocks_copy_1_1, '0']
+- [iio_pluto_source_0, '0', qtgui_waterfall_sink_x_0, '0']
 - [pdu_pdu_filter_0, pdus, epy_block_1, pdu_in]
 - [pdu_pdu_filter_0_0, pdus, epy_block_1, pdu_in]
 - [pdu_pdu_to_tagged_stream_0_0, '0', virtual_sink_0_1, '0']

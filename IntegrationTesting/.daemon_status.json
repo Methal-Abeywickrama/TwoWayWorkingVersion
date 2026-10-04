@@ -1,1 +1,1 @@
-{"pid": 87916, "ts": 1791092183.333432, "local_addr": 1, "local_port": 0, "peer": 1, "port": 0, "zmq_tx": 52001, "zmq_rx": 52002, "confirmations": true}
+{"pid": 166029, "ts": 1791113461.478801, "local_addr": 2, "local_port": 0, "peer": 1, "port": 0, "zmq_tx": 52001, "zmq_rx": 52002, "confirmations": true}
