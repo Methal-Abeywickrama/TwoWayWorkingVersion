@@ -93,7 +93,7 @@ blocks:
   id: variable
   parameters:
     comment: ''
-    value: '0'
+    value: '257'
   states:
     bus_sink: false
     bus_source: false
@@ -105,7 +105,7 @@ blocks:
   id: variable
   parameters:
     comment: ''
-    value: '0'
+    value: '241'
   states:
     bus_sink: false
     bus_source: false
@@ -117,7 +117,7 @@ blocks:
   id: variable
   parameters:
     comment: ''
-    value: '0'
+    value: '17'
   states:
     bus_sink: false
     bus_source: false
@@ -942,6 +942,53 @@ blocks:
     coordinate: [128, 1768.0]
     rotation: 180
     state: enabled
+- name: epy_block_2
+  id: epy_block
+  parameters:
+    _source_code: "import numpy as np\nfrom gnuradio import gr\nimport pmt\n\nclass\
+      \ blk(gr.basic_block):\n    \"\"\"\n    PDU Console Printer\n    Extracts binary\
+      \ payload from a PDU and prints it cleanly to stdout.\n    \"\"\"\n\n    def\
+      \ __init__(self):\n        gr.basic_block.__init__(\n            self,\n   \
+      \         name=\"PDU Payload Printer\",\n            in_sig=None,\n        \
+      \    out_sig=None,\n        )\n        \n        # Register PDU input port\n\
+      \        self.message_port_register_in(pmt.intern(\"pdu_in\"))\n        self.set_msg_handler(pmt.intern(\"\
+      pdu_in\"), self.handle_pdu)\n\n    def handle_pdu(self, pdu):\n        # PDUs\
+      \ are PMT pairs: (metadata_dict . payload_u8vector)\n        if not pmt.is_pair(pdu):\n\
+      \            print(\"[Printer Error] Received PMT is not a valid PDU Pair\"\
+      , flush=True)\n            return\n\n        meta = pmt.car(pdu)\n        payload_pmt\
+      \ = pmt.cdr(pdu)\n\n        # Ensure CDR is a uniform u8vector\n        if not\
+      \ pmt.is_u8vector(payload_pmt):\n            print(\"[Printer Error] PDU payload\
+      \ is not a u8vector\", flush=True)\n            return\n\n        # Extract\
+      \ bytes from vector\n        payload_bytes = bytes(pmt.u8vector_elements(payload_pmt))\n\
+      \n        # Attempt to decode string; fallback to hex if binary\n        try:\n\
+      \            text = payload_bytes.decode(\"utf-8\")\n            display_str\
+      \ = f\"'{text}'\"\n        except UnicodeDecodeError:\n            display_str\
+      \ = f\"<Binary Data: {payload_bytes.hex()}>\"\n\n        # Print cleanly with\
+      \ formatting header\n        print(\"\\n\" + \"=\" * 50, flush=True)\n     \
+      \   print(f\"[DECRYPTED PAYLOAD RECEIVED] ({len(payload_bytes)} bytes):\", flush=True)\n\
+      \        print(f\"  Payload: {display_str}\", flush=True)\n        \n      \
+      \  # Print metadata if present\n        if pmt.is_dict(meta):\n            keys\
+      \ = pmt.dict_keys(meta)\n            meta_str = []\n            while not pmt.is_null(keys):\n\
+      \                k = pmt.car(keys)\n                v = pmt.dict_ref(meta, k,\
+      \ pmt.PMT_NIL)\n                meta_str.append(f\"{pmt.symbol_to_string(k)}:\
+      \ {pmt.to_python(v)}\")\n                keys = pmt.cdr(keys)\n            if\
+      \ meta_str:\n                print(f\"  Metadata: {', '.join(meta_str)}\", flush=True)\n\
+      \                \n        print(\"=\" * 50 + \"\\n\", flush=True)"
+    affinity: ''
+    alias: ''
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+  states:
+    _io_cache: ('PDU Payload Printer', 'blk', [], [('pdu_in', 'message', 1)], [],
+      '\nPDU Console Printer\nExtracts binary payload from a PDU and prints it cleanly
+      to stdout.\n', [])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [120, 1896.0]
+    rotation: 0
+    state: enabled
 - name: iio_pluto_sink_0_0
   id: iio_pluto_sink
   parameters:
@@ -1597,6 +1644,7 @@ connections:
 - [epy_block_0, pdus_out, epy_block_0_0, msg_in]
 - [epy_block_0_0, pdu_out, pdu_pdu_to_tagged_stream_0_0, pdus]
 - [epy_block_0_0_0, pdu_out, epy_block_1, pdus_in]
+- [epy_block_1, pdus_out, epy_block_2, pdu_in]
 - [iio_pluto_source_0, '0', blocks_copy_1_1, '0']
 - [pdu_pdu_to_tagged_stream_0_0, '0', virtual_sink_0_1, '0']
 - [qtgui_edit_box_msg_0_0, msg, epy_block_0, pdus_in]

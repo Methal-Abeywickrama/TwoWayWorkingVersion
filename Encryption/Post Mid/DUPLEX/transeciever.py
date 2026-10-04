@@ -32,6 +32,7 @@ import transeciever_epy_block_0 as epy_block_0  # embedded python block
 import transeciever_epy_block_0_0 as epy_block_0_0  # embedded python block
 import transeciever_epy_block_0_0_0 as epy_block_0_0_0  # embedded python block
 import transeciever_epy_block_1 as epy_block_1  # embedded python block
+import transeciever_epy_block_2 as epy_block_2  # embedded python block
 
 
 
@@ -86,9 +87,9 @@ class transeciever(gr.top_block, Qt.QWidget):
         self.QPSK_CONST = QPSK_CONST = digital.constellation_rect([-1-1j, -1+1j, 1+1j, 1-1j], [0, 1, 3, 2],
         4, 2, 2, 1, 1).base()
         self.PUBLIC_KEY_PEER = PUBLIC_KEY_PEER = 0
-        self.PUBLIC_KEY_MINE = PUBLIC_KEY_MINE = 0
-        self.PRIVATE_KEY = PRIVATE_KEY = 0
-        self.PRIME = PRIME = 0
+        self.PUBLIC_KEY_MINE = PUBLIC_KEY_MINE = 17
+        self.PRIVATE_KEY = PRIVATE_KEY = 241
+        self.PRIME = PRIME = 257
         self.MY_ID = MY_ID = 0
         self.CH_GAIN = CH_GAIN = 20.0
         self.ADDR = ADDR = "ip:192.168.1.10"
@@ -250,6 +251,7 @@ class transeciever(gr.top_block, Qt.QWidget):
         self.iio_pluto_sink_0_0.set_samplerate(int(samp_rate))
         self.iio_pluto_sink_0_0.set_attenuation(0, CH_GAIN)
         self.iio_pluto_sink_0_0.set_filter_params('Auto', '', 0, 0)
+        self.epy_block_2 = epy_block_2.blk()
         self.epy_block_1 = epy_block_1.blk(prime=PRIME, private_key=PRIVATE_KEY)
         self.epy_block_0_0_0 = epy_block_0_0_0.PacketDeframerRX(peer_id=MY_ID, max_bit_errors=1, max_payload_len=8192, bit_rate=375000)
         self.epy_block_0_0 = epy_block_0_0.PacketFramerTX(peer_id=1, preamble_len=1024, repeat_count=50, max_payload_len=8196, preamble_byte=0xFF)
@@ -298,6 +300,7 @@ class transeciever(gr.top_block, Qt.QWidget):
         self.msg_connect((self.epy_block_0, 'pdus_out'), (self.epy_block_0_0, 'msg_in'))
         self.msg_connect((self.epy_block_0_0, 'pdu_out'), (self.pdu_pdu_to_tagged_stream_0_0, 'pdus'))
         self.msg_connect((self.epy_block_0_0_0, 'pdu_out'), (self.epy_block_1, 'pdus_in'))
+        self.msg_connect((self.epy_block_1, 'pdus_out'), (self.epy_block_2, 'pdu_in'))
         self.msg_connect((self.qtgui_edit_box_msg_0_0, 'msg'), (self.epy_block_0, 'pdus_in'))
         self.connect((self.analog_agc_xx_0, 0), (self.digital_fll_band_edge_cc_0, 0))
         self.connect((self.blocks_copy_0_0, 0), (self.digital_constellation_modulator_0_0_0, 0))
