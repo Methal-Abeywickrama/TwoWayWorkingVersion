@@ -1,0 +1,1 @@
+{"kind": "cdp-chat", "v": 1, "id": "9abfc5e7e267", "ts": 1791100503.7131135, "author": "node 2", "node": 2, "channel": "channel-2", "text": "test something", "attachment": null, "dst": {"addr": 1, "port": 0}}
