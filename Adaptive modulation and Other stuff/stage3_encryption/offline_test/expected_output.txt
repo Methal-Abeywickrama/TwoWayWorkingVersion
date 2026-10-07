@@ -1,0 +1,72 @@
+Offline test output for Stage 3 (python3 offline_test/test_stage3.py)
+Timings and frame counts vary run to run; the last line must be RESULT: PASS.
+
+=== test summary ===
+Stage 3: adaptive link + application-layer encryption
+--- 1) two key pairs (A: 17/241, B: 3/171), each encrypts with the other's public key
+  A->B secret.txt  sender=tx_done, receiver: identical
+  B->A reply.txt   sender=tx_done, receiver: identical
+  A->B photo.png   sender=tx_done, receiver: identical
+  plaintext visible in A's on-air bytes: no
+  => as expected
+--- 2) defaults (both nodes 17/241)
+  A->B secret.txt  sender=tx_done, receiver: identical
+  B->A reply.txt   sender=tx_done, receiver: identical
+  A->B photo.png   sender=tx_done, receiver: identical
+  plaintext visible in A's on-air bytes: no
+  => as expected
+--- 3) B uses the wrong private key (241 instead of 171): A->B garbled, B->A fine
+  A->B secret.txt  sender=tx_done, receiver: name='Z�\x12\r�\x1a�\x1aD\x1a\t>����u-�\tā\x1aǂ����\x1a' 734 B, differs
+  B->A reply.txt   sender=tx_done, receiver: identical
+  A->B photo.png   sender=tx_done, receiver: name='��X\x1aX�֡��nT�Bk���pf�`\x0fzYa��)' 7891 B, differs
+  plaintext visible in A's on-air bytes: no
+  => as expected
+--- 4) the old setting PUBLIC_KEY_PEER = 0
+  A->B secret.txt  sender=tx_done, receiver: name='\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01' 533 B, differs
+  B->A reply.txt   sender=tx_done, receiver: name='<unparseable: name length ov' 131 B, differs
+  A->B photo.png   sender=tx_done, receiver: name='\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01' 7752 B, differs
+  plaintext visible in A's on-air bytes: no
+  => as expected
+RESULT: PASS
+
+=== sample of what the flowgraph blocks print (first 40 lines) ===
+[TX] #0 -> 2 BPSK (short frame) 18 B | ask peer: -
+[LINK] avg SNR 20.1 dB -> asking peer for QPSK
+[RX] #0 BPSK 18 B SNR 20.1 dB
+[TX] #0 -> 1 BPSK (short frame) 18 B | ask peer: QPSK rxSNR 20.1dB
+[LINK] avg SNR 20.5 dB -> asking peer for QPSK
+[RX] #0 BPSK 18 B SNR 20.5 dB
+[TX] #1 -> 2 QPSK (peer request) 218 B | ask peer: QPSK rxSNR 20.5dB
+[TX] #2 -> 2 QPSK (peer request) 218 B | ask peer: QPSK rxSNR 20.5dB
+[TX] #3 -> 2 QPSK (peer request) 218 B | ask peer: QPSK rxSNR 20.5dB
+[TX] #4 -> 2 QPSK (peer request) 218 B | ask peer: QPSK rxSNR 20.5dB
+[RX] #1 QPSK 218 B SNR 19.9 dB
+[TX] #1 -> 1 BPSK (short frame) 18 B | ask peer: QPSK rxSNR 20.1dB
+[RX] #1 BPSK 18 B SNR 19.8 dB
+[RX] #2 QPSK 218 B SNR 20.0 dB
+[TX] #2 -> 1 BPSK (short frame) 18 B | ask peer: QPSK rxSNR 20.0dB
+[RX] #2 BPSK 18 B SNR 20.6 dB
+[RX] #3 QPSK 218 B SNR 20.2 dB
+[TX] #3 -> 1 BPSK (short frame) 18 B | ask peer: QPSK rxSNR 20.1dB
+[RX] #3 BPSK 18 B SNR 19.8 dB
+[RX] #4 QPSK 218 B SNR 20.1 dB
+[TX] #4 -> 1 BPSK (short frame) 18 B | ask peer: QPSK rxSNR 20.1dB
+[DECRYPTED PAYLOAD RECEIVED] from addr 1: 'secret.txt' (800 bytes)
+  Content: 'TOP SECRET: the meeting moved to 3 pm. TOP SECRET: the meeting moved to 3 pm. TOP SECRET: the meeting moved to 3 pm. TO...
+[TX] #5 -> 1 BPSK (short frame) 18 B | ask peer: QPSK rxSNR 20.1dB
+[RX] #4 BPSK 18 B SNR 19.9 dB
+[TX] #5 -> 2 BPSK (short frame) 18 B | ask peer: QPSK rxSNR 20.2dB
+[RX] #5 BPSK 18 B SNR 20.6 dB
+[TX] #6 -> 1 BPSK (short frame) 18 B | ask peer: QPSK rxSNR 20.2dB
+[RX] #5 BPSK 18 B SNR 20.8 dB
+[APP] FSM event: tx_done
+[TX] #7 -> 1 BPSK (short frame) 18 B | ask peer: QPSK rxSNR 20.2dB
+[RX] #6 BPSK 18 B SNR 19.8 dB
+[RX] #7 BPSK 18 B SNR 19.7 dB
+[TX] #6 -> 2 BPSK (short frame) 18 B | ask peer: QPSK rxSNR 20.1dB
+[RX] #6 BPSK 18 B SNR 20.0 dB
+[TX] #8 -> 1 QPSK (peer request) 157 B | ask peer: QPSK rxSNR 20.1dB
+[RX] #8 QPSK 157 B SNR 20.1 dB
+[TX] #7 -> 2 BPSK (short frame) 18 B | ask peer: QPSK rxSNR 20.1dB
+[DECRYPTED PAYLOAD RECEIVED] from addr 2: 'reply.txt' (139 bytes)
+  Content: 'ack: got it ack: got it ack: got it ack: got it ack: got it ack: got it ack: got it ack: got it ack: got it ack: got it...
