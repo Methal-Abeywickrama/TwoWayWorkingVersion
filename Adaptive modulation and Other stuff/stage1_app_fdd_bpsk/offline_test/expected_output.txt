@@ -1,0 +1,54 @@
+Offline test output for Stage 1 (python3 offline_test/test_stage1.py)
+Timings and frame counts vary run to run; the last line must be RESULT: PASS.
+
+=== test summary ===
+Stage 1: SR-ARQ app over FDD link (BPSK)
+  [clean   BER 1e-6] A->B notes.txt             1110 B: sender=tx_done, receiver=OK, identical (src_addr 1) in 0.3 s
+  [clean   BER 1e-6] A->B photo.png             6000 B: sender=tx_done, receiver=OK, identical (src_addr 1) in 1.1 s
+  [clean   BER 1e-6] B->A chat_1_abc123.json      68 B: sender=tx_done, receiver=OK, identical (src_addr 2) in 0.1 s
+  [noisy BER 1.5e-4] A->B notes.txt             1110 B: sender=tx_done, receiver=OK, identical (src_addr 1) in 0.7 s
+  [noisy BER 1.5e-4] A->B photo.png             6000 B: sender=tx_done, receiver=OK, identical (src_addr 1) in 3.4 s
+  [noisy BER 1.5e-4] B->A chat_1_abc123.json      68 B: sender=tx_done, receiver=OK, identical (src_addr 2) in 0.2 s
+RESULT: PASS
+
+=== sample of what the flowgraph blocks print (first 40 lines) ===
+[TX] msg #0 (to peer 2): 18 B payload (1 bursts queued)
+[TX] msg #0 (to peer 1): 18 B payload (1 bursts queued)
+[TX] msg #1 (to peer 2): 218 B payload (1 bursts queued)
+[TX] msg #2 (to peer 2): 218 B payload (1 bursts queued)
+[TX] msg #3 (to peer 2): 218 B payload (1 bursts queued)
+[TX] msg #4 (to peer 2): 218 B payload (1 bursts queued)
+[TX] msg #5 (to peer 2): 218 B payload (1 bursts queued)
+[TX] msg #6 (to peer 2): 147 B payload (1 bursts queued)
+[RX] msg #0: 1/1 bursts OK (Loss: 0%)
+[TX] msg #1 (to peer 1): 18 B payload (1 bursts queued)
+[RX] msg #0: 1/1 bursts OK (Loss: 0%)
+[RX] msg #1: 1/1 bursts OK (Loss: 0%)
+[TX] msg #2 (to peer 1): 18 B payload (1 bursts queued)
+[RX] msg #1: 1/1 bursts OK (Loss: 0%)
+[RX] msg #2: 1/1 bursts OK (Loss: 0%)
+[TX] msg #3 (to peer 1): 18 B payload (1 bursts queued)
+[RX] msg #2: 1/1 bursts OK (Loss: 0%)
+[RX] msg #3: 1/1 bursts OK (Loss: 0%)
+[TX] msg #4 (to peer 1): 18 B payload (1 bursts queued)
+[RX] msg #3: 1/1 bursts OK (Loss: 0%)
+[RX] msg #4: 1/1 bursts OK (Loss: 0%)
+[TX] msg #5 (to peer 1): 18 B payload (1 bursts queued)
+[RX] msg #4: 1/1 bursts OK (Loss: 0%)
+[RX] msg #5: 1/1 bursts OK (Loss: 0%)
+[TX] msg #6 (to peer 1): 18 B payload (1 bursts queued)
+[TX] msg #7 (to peer 1): 18 B payload (1 bursts queued)
+[RX] msg #5: 1/1 bursts OK (Loss: 0%)
+[TX] msg #7 (to peer 2): 18 B payload (1 bursts queued)
+[RX] msg #6: 1/1 bursts OK (Loss: 0%)[RX] msg #6: 1/1 bursts OK (Loss: 0%)
+[TX] msg #8 (to peer 2): 18 B payload (1 bursts queued)
+[TX] msg #8 (to peer 1): 18 B payload (1 bursts queued)
+[RX] msg #7: 1/1 bursts OK (Loss: 0%)
+[TX] msg #9 (to peer 1): 18 B payload (1 bursts queued)
+[RX] msg #7: 1/1 bursts OK (Loss: 0%)
+[RX] msg #8: 1/1 bursts OK (Loss: 0%)
+[TX] msg #9 (to peer 2): 218 B payload (1 bursts queued)
+[TX] msg #10 (to peer 2): 218 B payload (1 bursts queued)
+[TX] msg #11 (to peer 2): 218 B payload (1 bursts queued)
+[TX] msg #12 (to peer 2): 218 B payload (1 bursts queued)
+[TX] msg #13 (to peer 2): 218 B payload (1 bursts queued)

@@ -1,0 +1,66 @@
+Offline test output for Stage 2 (python3 offline_test/test_stage2.py)
+Timings and frame counts vary run to run; the last line must be RESULT: PASS.
+
+=== test summary ===
+Stage 2: SR-ARQ app over the adaptive link
+--- 1) good link both ways (20 dB): should move to QPSK
+  A->B hello.txt     1840 B: sender=tx_done, receiver=identical,  0.5 s
+  B->A reply.txt      600 B: sender=tx_done, receiver=identical,  0.3 s
+  A->B photo.png    20000 B: sender=tx_done, receiver=identical,  3.7 s
+  DATA frames received by B (A->B @ 20 dB now): {'QPSK': 111}
+  DATA frames received by A (B->A @ 20 dB): {'QPSK': 4}
+--- 2) A->B drops from 20 dB to 11 dB 1.5 s into the transfers
+  A->B hello.txt     1840 B: sender=tx_done, receiver=identical,  0.5 s
+  B->A reply.txt      600 B: sender=tx_done, receiver=identical,  0.3 s
+  A->B photo.png    20000 B: sender=tx_done, receiver=identical,  5.1 s
+  DATA frames received by B (A->B @ 11 dB now): {'QPSK': 29, 'BPSK': 82}
+  DATA frames received by A (B->A @ 20 dB): {'QPSK': 4}
+--- 3) weak link both ways (10 dB): must stay BPSK
+  A->B hello.txt     1840 B: sender=tx_done, receiver=identical,  0.5 s
+  B->A reply.txt      600 B: sender=tx_done, receiver=identical,  0.3 s
+  A->B photo.png    20000 B: sender=tx_done, receiver=identical,  3.9 s
+  DATA frames received by B (A->B @ 10 dB now): {'BPSK': 111}
+  DATA frames received by A (B->A @ 10 dB): {'BPSK': 4}
+RESULT: PASS
+
+=== sample of what the flowgraph blocks print (first 40 lines) ===
+[TX] #0 -> 2 BPSK (short frame) 18 B | ask peer: -
+[LINK] avg SNR 19.8 dB -> asking peer for QPSK
+[RX] #0 BPSK 18 B SNR 19.8 dB
+[TX] #0 -> 1 BPSK (short frame) 18 B | ask peer: QPSK rxSNR 19.8dB
+[LINK] avg SNR 20.0 dB -> asking peer for QPSK
+[RX] #0 BPSK 18 B SNR 20.0 dB
+[TX] #1 -> 2 QPSK (peer request) 218 B | ask peer: QPSK rxSNR 20.0dB
+[TX] #2 -> 2 QPSK (peer request) 218 B | ask peer: QPSK rxSNR 20.0dB
+[TX] #3 -> 2 QPSK (peer request) 218 B | ask peer: QPSK rxSNR 20.0dB
+[TX] #4 -> 2 QPSK (peer request) 218 B | ask peer: QPSK rxSNR 20.0dB
+[TX] #5 -> 2 QPSK (peer request) 218 B | ask peer: QPSK rxSNR 20.0dB
+[TX] #6 -> 2 QPSK (peer request) 218 B | ask peer: QPSK rxSNR 20.0dB
+[TX] #7 -> 2 QPSK (peer request) 218 B | ask peer: QPSK rxSNR 20.0dB
+[TX] #8 -> 2 QPSK (peer request) 218 B | ask peer: QPSK rxSNR 20.0dB
+[RX] #1 QPSK 218 B SNR 20.0 dB
+[TX] #1 -> 1 BPSK (short frame) 18 B | ask peer: QPSK rxSNR 19.9dB
+[RX] #1 BPSK 18 B SNR 19.9 dB
+[TX] #9 -> 2 QPSK (peer request) 218 B | ask peer: QPSK rxSNR 20.0dB
+[RX] #2 QPSK 218 B SNR 20.0 dB
+[TX] #2 -> 1 BPSK (short frame) 18 B | ask peer: QPSK rxSNR 19.9dB
+[RX] #2 BPSK 18 B SNR 20.4 dB
+[TX] #10 -> 2 QPSK (peer request) 77 B | ask peer: QPSK rxSNR 20.0dB
+[RX] #3 QPSK 218 B SNR 20.0 dB
+[TX] #3 -> 1 BPSK (short frame) 18 B | ask peer: QPSK rxSNR 19.9dB
+[RX] #3 BPSK 18 B SNR 20.2 dB
+[RX] #4 QPSK 218 B SNR 20.1 dB
+[TX] #4 -> 1 BPSK (short frame) 18 B | ask peer: QPSK rxSNR 19.9dB
+[RX] #4 BPSK 18 B SNR 20.0 dB
+[RX] #5 QPSK 218 B SNR 20.0 dB
+[TX] #5 -> 1 BPSK (short frame) 18 B | ask peer: QPSK rxSNR 19.9dB
+[RX] #5 BPSK 18 B SNR 20.1 dB
+[RX] #6 QPSK 218 B SNR 19.9 dB
+[TX] #6 -> 1 BPSK (short frame) 18 B | ask peer: QPSK rxSNR 19.9dB
+[RX] #6 BPSK 18 B SNR 19.7 dB
+[RX] #7 QPSK 218 B SNR 20.0 dB
+[TX] #7 -> 1 BPSK (short frame) 18 B | ask peer: QPSK rxSNR 20.0dB
+[RX] #7 BPSK 18 B SNR 19.9 dB
+[RX] #8 QPSK 218 B SNR 19.8 dB
+[TX] #8 -> 1 BPSK (short frame) 18 B | ask peer: QPSK rxSNR 19.9dB
+[RX] #8 BPSK 18 B SNR 19.6 dB
