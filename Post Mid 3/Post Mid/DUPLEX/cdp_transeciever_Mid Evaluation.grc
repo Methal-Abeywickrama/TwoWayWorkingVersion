@@ -798,7 +798,7 @@ blocks:
     filter: ''
     filter_source: '''Auto'''
     fpass: '0'
-    frequency: int(500e6)
+    frequency: int(733e6)
     fstop: '0'
     len_tag_key: ''
     samplerate: int(samp_rate)
@@ -823,7 +823,7 @@ blocks:
     filter: ''
     filter_source: '''Auto'''
     fpass: '0'
-    frequency: int(733e6)
+    frequency: int(500e6)
     fstop: '0'
     gain1: '''slow_attack'''
     len_tag_key: packet_len

@@ -1289,8 +1289,8 @@ blocks:
   states:
     _io_cache: '(''SR-ARQ FSM Core'', ''blk'', [(''m'', ''4''), (''rto_ms'', ''1500''),
       (''node_role'', "''initiator''"), (''mtu_bytes'', ''200''), (''local_addr'',
-      ''1''), (''local_port'', ''0''), (''max_retries'', ''10'')], [(''pdu_in'', ''message'',
-      1), (''app_in'', ''message'', 1)], [(''app_out'', ''message'', 1), (''pdu_out'',
+      ''1''), (''local_port'', ''0''), (''max_retries'', ''10'')], [(''app_in'', ''message'',
+      1), (''pdu_in'', ''message'', 1)], [(''app_out'', ''message'', 1), (''pdu_out'',
       ''message'', 1)], ''\nBlock 2: SR-ARQ FSM Core\nEnv vars: TL_M, TL_RTO_MS, TL_ROLE,
       TL_MTU, TL_LOCAL_ADDR,\n          TL_LOCAL_PORT, TL_MAX_RETRIES\n'', [''local_addr'',
       ''local_port'', ''m'', ''max_retries''])'
@@ -1355,7 +1355,7 @@ blocks:
     filter: ''
     filter_source: '''Auto'''
     fpass: '0'
-    frequency: int(900e6)
+    frequency: int(2.473e9)
     fstop: '0'
     len_tag_key: ''
     samplerate: int(samp_rate)
@@ -1380,7 +1380,7 @@ blocks:
     filter: ''
     filter_source: '''Auto'''
     fpass: '0'
-    frequency: int(733e6)
+    frequency: int(2.412e9)
     fstop: '0'
     gain1: '''slow_attack'''
     len_tag_key: packet_len
