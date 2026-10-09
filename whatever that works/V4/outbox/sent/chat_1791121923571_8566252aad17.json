@@ -1,0 +1,1 @@
+{"kind": "cdp-chat", "v": 1, "id": "8566252aad17", "ts": 1791121923.571755, "author": "node 1", "node": 1, "channel": "general", "text": "", "attachment": {"name": "test.txt", "file": "test_9c3a.txt", "size": 2023, "kind": "text"}, "dst": {"addr": 2, "port": 1}}

@@ -1,0 +1,29 @@
+File Transfer
+
+Now that the correct radio settings have been found, we proceed to file transfer using the same loopback flowgraphs as in Stage 6 and the connections shown above.
+
+Those loopback flowgraphs revert the file source to non-repeat. The file sink and message debug blocks are enabled.
+
+For proper operation, the user must manually enter the correct sample rate and frequency in the variable blocks, and the correct transmit and receive gain in the GUI Range blocks. For the gains, they are entered in the parameter 'Default Value'.
+
+For Stage 6, the loopback flowgraphs contained the transmitter and receiver, thus assuring that the transmitter was not started before the receiver. For Stage 7, the transmitter and receiver are in different locations, running on different copies of the loopback flowgraphs, so the receiver must be started manually before the transmitter.
+
+Specifically, the receiver for device B must have its gain set and flowgraph started first. Then the transmitter for device A must have its gain set and flowgraph started. Once the console output of device B shows the received file data, both flowgraphs may be terminated.
+
+USRP Download: Media:Bpsk_file_transfer_loopback.grc
+
+ADALM-PLUTO Download: Media:Bpsk_file_transfer_loopback_pluto.grc
+Receiving with RTL-SDR
+
+This section was designed and tested with a RTL-SDR Blog V3. Other models would require changes to the gain settings and possibly other parameters.
+Frequency
+
+A frequency of 905.2MHz (also in an ISM band) is used in the included files. Note that the transmitter must be on the same frequency.
+Transmit and Receive Gains
+
+Load and execute Media:Bpsk_file_transfer7.grc (for USRP) or Media:Bpsk_file_transfer7_pluto.grc (for ADALM-PLUTO) as appropriate.
+
+Load and execute Media:Bpsk_file_transfer7_receive_gain.grc.
+
+Adjust the transmit and receive gains as was done in Stage 6. Leave the transmit from B and receive on A settings at zero gain. Make sure to write down the gain settings before terminating the flowgraphs.
+
