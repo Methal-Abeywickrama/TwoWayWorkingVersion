@@ -65,6 +65,18 @@ blocks:
     coordinate: [8, 452.0]
     rotation: 0
     state: enabled
+- name: BUFFER_SIZE
+  id: variable
+  parameters:
+    comment: ''
+    value: '2048'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [544, 176.0]
+    rotation: 0
+    state: enabled
 - name: CH_GAIN
   id: variable
   parameters:
@@ -178,7 +190,7 @@ blocks:
   id: variable
   parameters:
     comment: ''
-    value: '1024'
+    value: '2048'
   states:
     bus_sink: false
     bus_source: false
@@ -488,6 +500,25 @@ blocks:
     coordinate: [1256, 824.0]
     rotation: 0
     state: disabled
+- name: blocks_tag_debug_0
+  id: blocks_tag_debug
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    display: 'True'
+    filter: '""'
+    name: ''
+    num_inputs: '1'
+    type: byte
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1072, 1664.0]
+    rotation: 0
+    state: enabled
 - name: blocks_tag_gate_0_0
   id: blocks_tag_gate
   parameters:
@@ -724,7 +755,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [2216, 768.0]
+    coordinate: [2264, 768.0]
     rotation: 0
     state: enabled
 - name: digital_map_bb_0
@@ -767,7 +798,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1744, 780.0]
+    coordinate: [1696, 780.0]
     rotation: 0
     state: enabled
 - name: epy_block_0_0
@@ -775,18 +806,22 @@ blocks:
   parameters:
     _source_code: "\"\"\"\nEmbedded Python Block: Burst Packet Framer TX\n- Outputs\
       \ packed byte PDUs directly to pdu_pdu_to_tagged_stream\n- Zero idle transmission\
-      \ (idle between bursts = complete silence)\n- Zero postamble / trailing idle\n\
-      - Frame layout: [preamble] [1A CF FC 1D] [len: 2B][dest_id: 1B][msg_id: 1B][rep:\
-      \ 1B][n_reps: 1B] [payload] [CRC32: 4B]\n- CRC32 covers header + payload\n\"\
-      \"\"\nimport zlib\nimport pmt\nfrom gnuradio import gr\n\nSYNC_WORD = bytes([0x1A,\
-      \ 0xCF, 0xFC, 0x1D])\n\n\nclass PacketFramerTX(gr.basic_block):\n    def __init__(self,\
-      \ peer_id=1, preamble_len=64, repeat_count=5, max_payload_len=1024, preamble_byte=0xFF):\n\
-      \        gr.basic_block.__init__(\n            self,\n            name=\"Packet\
-      \ Framer TX (Burst)\",\n            in_sig=None,\n            out_sig=None,\n\
-      \        )\n        self.peer_id = int(peer_id) & 0xFF\n        self.preamble_len\
-      \ = int(preamble_len)\n        self.repeat_count = int(repeat_count)\n     \
-      \   self.max_payload_len = int(max_payload_len)\n        self.preamble_byte\
-      \ = int(preamble_byte) & 0xFF\n        self._msg_id = 0\n\n        self.message_port_register_in(pmt.intern(\"\
+      \ between bursts\n- Frame layout: [preamble] [1A CF FC 1D] [len: 2B][dest_id:\
+      \ 1B][msg_id: 1B][rep: 1B][n_reps: 1B] [payload] [CRC32: 4B] [postamble]\n-\
+      \ Postamble dynamically padded so total size is a multiple of buffer_size\n\
+      - Attaches tx_sob (Start of Burst) and tx_eob (End of Burst) metadata tags\n\
+      \"\"\"\nimport zlib\nimport pmt\nfrom gnuradio import gr\n\nSYNC_WORD = bytes([0x1A,\
+      \ 0xCF, 0xFC, 0x1D])\n\n\nclass PacketFramerTX(gr.basic_block):\n    def __init__(\n\
+      \        self,\n        peer_id=1,\n        preamble_len=64,\n        repeat_count=5,\n\
+      \        max_payload_len=1024,\n        preamble_byte=0xFF,\n        buffer_size=512,\n\
+      \        postamble_byte=0x00,\n    ):\n        gr.basic_block.__init__(\n  \
+      \          self,\n            name=\"Packet Framer TX (Burst)\",\n         \
+      \   in_sig=None,\n            out_sig=None,\n        )\n        self.peer_id\
+      \ = int(peer_id) & 0xFF\n        self.preamble_len = int(preamble_len)\n   \
+      \     self.repeat_count = int(repeat_count)\n        self.max_payload_len =\
+      \ int(max_payload_len)\n        self.preamble_byte = int(preamble_byte) & 0xFF\n\
+      \        self.buffer_size = int(buffer_size)\n        self.postamble_byte =\
+      \ int(postamble_byte) & 0xFF\n        self._msg_id = 0\n\n        self.message_port_register_in(pmt.intern(\"\
       msg_in\"))\n        self.set_msg_handler(pmt.intern(\"msg_in\"), self.handle_msg)\n\
       \        self.message_port_register_out(pmt.intern(\"pdu_out\"))\n\n    @staticmethod\n\
       \    def _extract_payload(msg):\n        if pmt.is_pair(msg):\n            data\
@@ -800,36 +835,54 @@ blocks:
       \ print(f\"[TX] Could not parse message: {e}\", flush=True)\n            return\n\
       \n        if not payload:\n            return\n\n        if len(payload) > self.max_payload_len:\n\
       \            print(f\"[TX] Payload {len(payload)} B truncated to {self.max_payload_len}\
-      \ B\", flush=True)\n            payload = payload[:self.max_payload_len]\n\n\
+      \ B\", flush=True)\n            payload = payload[: self.max_payload_len]\n\n\
       \        msg_id = self._msg_id\n        self._msg_id = (self._msg_id + 1) &\
       \ 0xFF\n        n_reps = max(1, min(255, self.repeat_count))\n\n        preamble\
-      \ = bytes([self.preamble_byte]) * self.preamble_len\n        print(f\"[TX] msg\
-      \ #{msg_id} (to peer {self.peer_id}): '{payload.decode('utf-8', 'replace')}'\
-      \ ({n_reps} bursts queued)\", flush=True)\n\n        for rep in range(n_reps):\n\
-      \            header = len(payload).to_bytes(2, \"big\") + bytes([self.peer_id,\
-      \ msg_id, rep, n_reps])\n            crc = zlib.crc32(header + payload).to_bytes(4,\
-      \ \"big\")\n            frame = preamble + SYNC_WORD + header + payload + crc\n\
-      \n            vec = pmt.init_u8vector(len(frame), list(frame))\n           \
-      \ self.message_port_pub(pmt.intern(\"pdu_out\"), pmt.cons(pmt.PMT_NIL, vec))"
+      \ = bytes([self.preamble_byte]) * self.preamble_len\n        print(\n      \
+      \      f\"[TX] msg #{msg_id} (to peer {self.peer_id}): '{payload.decode('utf-8',\
+      \ 'replace')}' ({n_reps} bursts queued)\",\n            flush=True,\n      \
+      \  )\n\n        for rep in range(n_reps):\n            header = len(payload).to_bytes(2,\
+      \ \"big\") + bytes([self.peer_id, msg_id, rep, n_reps])\n            crc = zlib.crc32(header\
+      \ + payload).to_bytes(4, \"big\")\n\n            # Core frame structure before\
+      \ buffer alignment\n            raw_frame = preamble + SYNC_WORD + header +\
+      \ payload + crc\n\n            # Calculate postamble padding required to match\
+      \ buffer_size multiple\n            if self.buffer_size > 0:\n             \
+      \   rem = len(raw_frame) % self.buffer_size\n                pad_len = (self.buffer_size\
+      \ - rem) % self.buffer_size\n            else:\n                pad_len = 0\n\
+      \n            postamble = bytes([self.postamble_byte]) * pad_len\n         \
+      \   frame = raw_frame + postamble\n\n            # Build metadata dictionary\
+      \ with tx_sob and tx_eob tags\n            meta = pmt.make_dict()\n        \
+      \    meta = pmt.dict_add(meta, pmt.intern(\"tx_sob\"), pmt.PMT_T)\n        \
+      \    meta = pmt.dict_add(meta, pmt.intern(\"tx_eob\"), pmt.PMT_T)\n\n      \
+      \      # Explicit offset tags for downstream PDU-to-Tagged-Stream conversion\n\
+      \            sob_tag = pmt.make_tuple(pmt.from_long(0), pmt.intern(\"tx_sob\"\
+      ), pmt.PMT_T)\n            eob_tag = pmt.make_tuple(pmt.from_long(len(frame)\
+      \ - 1), pmt.intern(\"tx_eob\"), pmt.PMT_T)\n            extra_tags = pmt.list2(sob_tag,\
+      \ eob_tag)\n            meta = pmt.dict_add(meta, pmt.intern(\"extra_tags\"\
+      ), extra_tags)\n\n            vec = pmt.init_u8vector(len(frame), list(frame))\n\
+      \            self.message_port_pub(pmt.intern(\"pdu_out\"), pmt.cons(meta, vec))\n"
     affinity: ''
     alias: ''
+    buffer_size: BUFFER_SIZE
     comment: ''
     max_payload_len: max_payload_len
     maxoutbuf: '0'
     minoutbuf: '0'
     peer_id: '0'
+    postamble_byte: '0xFF'
     preamble_byte: '0xFF'
     preamble_len: '128'
-    repeat_count: '5'
+    repeat_count: '2'
   states:
     _io_cache: ('Packet Framer TX (Burst)', 'PacketFramerTX', [('peer_id', '1'), ('preamble_len',
       '64'), ('repeat_count', '5'), ('max_payload_len', '1024'), ('preamble_byte',
-      '255')], [('msg_in', 'message', 1)], [('pdu_out', 'message', 1)], '', ['max_payload_len',
-      'peer_id', 'preamble_byte', 'preamble_len', 'repeat_count'])
+      '255'), ('buffer_size', '512'), ('postamble_byte', '0')], [('msg_in', 'message',
+      1)], [('pdu_out', 'message', 1)], '', ['buffer_size', 'max_payload_len', 'peer_id',
+      'postamble_byte', 'preamble_byte', 'preamble_len', 'repeat_count'])
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [920, 1744.0]
+    coordinate: [824, 1732.0]
     rotation: 180
     state: enabled
 - name: epy_block_0_0_0
@@ -937,7 +990,7 @@ blocks:
     alias: ''
     attenuation1: CH_GAIN
     bandwidth: '1500000'
-    buffer_size: int(max_payload_len+34)*32
+    buffer_size: BUFFER_SIZE
     comment: ''
     cyclic: 'False'
     filter: ''
@@ -963,7 +1016,7 @@ blocks:
     alias: ''
     bandwidth: '1500000'
     bbdc: 'True'
-    buffer_size: '2048'
+    buffer_size: BUFFER_SIZE
     comment: ''
     filter: ''
     filter_source: '''Auto'''
@@ -1028,7 +1081,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [848, 1592.0]
+    coordinate: [760, 1600.0]
     rotation: 0
     state: enabled
 - name: qtgui_const_sink_x_0
@@ -1234,7 +1287,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1224, 1744.0]
+    coordinate: [1136, 1752.0]
     rotation: 180
     state: enabled
 - name: qtgui_freq_sink_x_0
@@ -1571,7 +1624,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1152, 1592.0]
+    coordinate: [1064, 1600.0]
     rotation: 0
     state: enabled
 - name: virtual_sink_2
@@ -1738,6 +1791,7 @@ connections:
 - [iio_pluto_source_0, '0', analog_pwr_squelch_xx_0_0, '0']
 - [iio_pluto_source_0, '0', blocks_complex_to_mag_squared_0, '0']
 - [iio_pluto_source_0, '0', blocks_copy_1_1, '0']
+- [pdu_pdu_to_tagged_stream_0_0, '0', blocks_tag_debug_0, '0']
 - [pdu_pdu_to_tagged_stream_0_0, '0', virtual_sink_0_1, '0']
 - [qtgui_edit_box_msg_0_0, msg, epy_block_0_0, msg_in]
 - [root_raised_cosine_filter_0, '0', digital_symbol_sync_xx_0, '0']

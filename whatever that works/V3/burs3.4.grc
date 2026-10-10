@@ -65,6 +65,18 @@ blocks:
     coordinate: [8, 452.0]
     rotation: 0
     state: enabled
+- name: BUFFER_SIZE
+  id: variable
+  parameters:
+    comment: ''
+    value: '2048'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [544, 176.0]
+    rotation: 0
+    state: enabled
 - name: CH_GAIN
   id: variable
   parameters:
@@ -109,6 +121,42 @@ blocks:
     coordinate: [8, 148.0]
     rotation: 0
     state: enabled
+- name: RC_PULSE
+  id: variable
+  parameters:
+    comment: ''
+    value: np.sinc(RC_X)*np.cos(np.pi*alpha*RC_X)/(1-(2*alpha*RC_X)**2)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [704, 256.0]
+    rotation: 0
+    state: enabled
+- name: RC_X
+  id: variable
+  parameters:
+    comment: ''
+    value: np.arange(-8, 9)/2.0
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [544, 256.0]
+    rotation: 0
+    state: enabled
+- name: RX_AMP
+  id: variable
+  parameters:
+    comment: ''
+    value: '1.0'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [864, 256.0]
+    rotation: 0
+    state: enabled
 - name: SDR_CF
   id: variable
   parameters:
@@ -121,6 +169,42 @@ blocks:
     coordinate: [320, 92.0]
     rotation: 0
     state: enabled
+- name: TRAIN_BITS
+  id: variable
+  parameters:
+    comment: ''
+    value: np.unpackbits(np.frombuffer(bytes([0xF8, 0xDD, 0x42, 0x58]), np.uint8))
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [208, 256.0]
+    rotation: 0
+    state: enabled
+- name: TRAIN_REF
+  id: variable
+  parameters:
+    comment: ''
+    value: list(map(complex, RX_AMP*np.convolve(np.kron(TRAIN_SYMS, [1, 0]), RC_PULSE)[8:8+2*len(TRAIN_SYMS)-1]))
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [208, 336.0]
+    rotation: 0
+    state: enabled
+- name: TRAIN_SYMS
+  id: variable
+  parameters:
+    comment: ''
+    value: list(map(complex, 1 - 2*np.bitwise_xor.accumulate(TRAIN_BITS).astype(int)))
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [376, 256.0]
+    rotation: 0
+    state: enabled
 - name: adpt_alg
   id: variable_adaptive_algorithm
   parameters:
@@ -130,7 +214,7 @@ blocks:
     ffactor: '0.99'
     modulus: '2'
     step_size: '.01'
-    type: cma
+    type: nlms
   states:
     bus_sink: false
     bus_source: false
@@ -148,6 +232,28 @@ blocks:
     bus_source: false
     bus_structure: null
     coordinate: [384, 12.0]
+    rotation: 0
+    state: enabled
+- name: corr_thr
+  id: variable_qtgui_range
+  parameters:
+    comment: Start high (no triggers). Lower until [corr_est] tags print. Too low
+      => spurious triggers.
+    gui_hint: ''
+    label: ''
+    min_len: '200'
+    orient: QtCore.Qt.Horizontal
+    rangeType: float
+    start: '0.05'
+    step: '0.05'
+    stop: '100'
+    value: '30'
+    widget: counter_slider
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1176, 16.0]
     rotation: 0
     state: enabled
 - name: costas_bw
@@ -178,7 +284,7 @@ blocks:
   id: variable
   parameters:
     comment: ''
-    value: '1024'
+    value: '2048'
   states:
     bus_sink: false
     bus_source: false
@@ -241,6 +347,27 @@ blocks:
     bus_source: false
     bus_structure: null
     coordinate: [208, 172.0]
+    rotation: 0
+    state: enabled
+- name: train_delay
+  id: variable_qtgui_range
+  parameters:
+    comment: ''
+    gui_hint: ''
+    label: ''
+    min_len: '200'
+    orient: QtCore.Qt.Horizontal
+    rangeType: int
+    start: '0'
+    step: '1'
+    stop: '12'
+    value: '3'
+    widget: counter_slider
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1064, 16.0]
     rotation: 0
     state: enabled
 - name: analog_agc_xx_0
@@ -449,7 +576,26 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [2256, 888.0]
+    coordinate: [2376, 920.0]
+    rotation: 0
+    state: disabled
+- name: blocks_copy_2_0
+  id: blocks_copy
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    enabled: 'True'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    showports: 'False'
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [2104, 760.0]
     rotation: 0
     state: disabled
 - name: blocks_nlog10_ff_0
@@ -488,6 +634,44 @@ blocks:
     coordinate: [1256, 824.0]
     rotation: 0
     state: disabled
+- name: blocks_tag_debug_0
+  id: blocks_tag_debug
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    display: 'True'
+    filter: '""'
+    name: ''
+    num_inputs: '1'
+    type: byte
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1072, 1664.0]
+    rotation: 0
+    state: enabled
+- name: blocks_tag_debug_corr
+  id: blocks_tag_debug
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    display: 'True'
+    filter: '"corr_est"'
+    name: corr_est
+    num_inputs: '1'
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [2328, 552.0]
+    rotation: 0
+    state: enabled
 - name: blocks_tag_gate_0_0
   id: blocks_tag_gate
   parameters:
@@ -634,6 +818,26 @@ blocks:
     coordinate: [792, 348.0]
     rotation: 0
     state: disabled
+- name: digital_corr_est_cc_0
+  id: digital_corr_est_cc
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    mark_delay: train_delay
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    sps: '2'
+    symbols: TRAIN_REF
+    threshold: corr_thr
+    threshold_method: digital.THRESHOLD_ABSOLUTE
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1992, 520.0]
+    rotation: 0
+    state: enabled
 - name: digital_costas_loop_cc_0
   id: digital_costas_loop_cc
   parameters:
@@ -716,15 +920,15 @@ blocks:
     comment: ''
     maxoutbuf: '0'
     minoutbuf: '0'
-    num_taps: '15'
+    num_taps: '7'
     sps: '2'
-    training_sequence: '[]'
-    training_start_tag: '""'
+    training_sequence: TRAIN_SYMS
+    training_start_tag: '"corr_est"'
   states:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [2216, 768.0]
+    coordinate: [2256, 696.0]
     rotation: 0
     state: enabled
 - name: digital_map_bb_0
@@ -773,20 +977,30 @@ blocks:
 - name: epy_block_0_0
   id: epy_block
   parameters:
-    _source_code: "\"\"\"\nEmbedded Python Block: Burst Packet Framer TX\n- Outputs\
-      \ packed byte PDUs directly to pdu_pdu_to_tagged_stream\n- Zero idle transmission\
-      \ (idle between bursts = complete silence)\n- Zero postamble / trailing idle\n\
-      - Frame layout: [preamble] [1A CF FC 1D] [len: 2B][dest_id: 1B][msg_id: 1B][rep:\
-      \ 1B][n_reps: 1B] [payload] [CRC32: 4B]\n- CRC32 covers header + payload\n\"\
-      \"\"\nimport zlib\nimport pmt\nfrom gnuradio import gr\n\nSYNC_WORD = bytes([0x1A,\
-      \ 0xCF, 0xFC, 0x1D])\n\n\nclass PacketFramerTX(gr.basic_block):\n    def __init__(self,\
-      \ peer_id=1, preamble_len=64, repeat_count=5, max_payload_len=1024, preamble_byte=0xFF):\n\
-      \        gr.basic_block.__init__(\n            self,\n            name=\"Packet\
-      \ Framer TX (Burst)\",\n            in_sig=None,\n            out_sig=None,\n\
-      \        )\n        self.peer_id = int(peer_id) & 0xFF\n        self.preamble_len\
-      \ = int(preamble_len)\n        self.repeat_count = int(repeat_count)\n     \
-      \   self.max_payload_len = int(max_payload_len)\n        self.preamble_byte\
-      \ = int(preamble_byte) & 0xFF\n        self._msg_id = 0\n\n        self.message_port_register_in(pmt.intern(\"\
+    _source_code: "\"\"\"\nEmbedded Python Block: Burst Packet Framer TX (with equalizer\
+      \ training word)\n- Outputs packed byte PDUs directly to pdu_pdu_to_tagged_stream\n\
+      - Zero idle transmission between bursts\n- Frame layout: [preamble] [train word:\
+      \ F8 DD 42 58] [1A CF FC 1D] [len: 2B][dest_id: 1B][msg_id: 1B][rep: 1B][n_reps:\
+      \ 1B] [payload] [CRC32: 4B] [postamble]\n- The train word is known to the RX:\
+      \ the correlator (digital_corr_est_cc) finds it, tags it,\n  and the linear\
+      \ equalizer trains on it. The deframer does not look at it (it only looks for\
+      \ the sync word).\n- Postamble dynamically padded so total size is a multiple\
+      \ of buffer_size\n- Attaches tx_sob (Start of Burst) and tx_eob (End of Burst)\
+      \ metadata tags\n\"\"\"\nimport zlib\nimport pmt\nfrom gnuradio import gr\n\n\
+      SYNC_WORD = bytes([0x1A, 0xCF, 0xFC, 0x1D])\n# 31-bit m-sequence + 1 pad bit.\
+      \ MUST match TRAIN_BITS in the flowgraph (RX side).\nTRAIN_WORD = bytes([0xF8,\
+      \ 0xDD, 0x42, 0x58])\n\n\nclass PacketFramerTX(gr.basic_block):\n    def __init__(\n\
+      \        self,\n        peer_id=1,\n        preamble_len=64,\n        repeat_count=5,\n\
+      \        max_payload_len=1024,\n        preamble_byte=0xFF,\n        buffer_size=512,\n\
+      \        postamble_byte=0x00,\n        train_enable=1,\n    ):\n        gr.basic_block.__init__(\n\
+      \            self,\n            name=\"Packet Framer TX (Burst)\",\n       \
+      \     in_sig=None,\n            out_sig=None,\n        )\n        self.peer_id\
+      \ = int(peer_id) & 0xFF\n        self.preamble_len = int(preamble_len)\n   \
+      \     self.repeat_count = int(repeat_count)\n        self.max_payload_len =\
+      \ int(max_payload_len)\n        self.preamble_byte = int(preamble_byte) & 0xFF\n\
+      \        self.buffer_size = int(buffer_size)\n        self.postamble_byte =\
+      \ int(postamble_byte) & 0xFF\n        self.train_enable = int(train_enable)\n\
+      \        self._msg_id = 0\n\n        self.message_port_register_in(pmt.intern(\"\
       msg_in\"))\n        self.set_msg_handler(pmt.intern(\"msg_in\"), self.handle_msg)\n\
       \        self.message_port_register_out(pmt.intern(\"pdu_out\"))\n\n    @staticmethod\n\
       \    def _extract_payload(msg):\n        if pmt.is_pair(msg):\n            data\
@@ -800,36 +1014,56 @@ blocks:
       \ print(f\"[TX] Could not parse message: {e}\", flush=True)\n            return\n\
       \n        if not payload:\n            return\n\n        if len(payload) > self.max_payload_len:\n\
       \            print(f\"[TX] Payload {len(payload)} B truncated to {self.max_payload_len}\
-      \ B\", flush=True)\n            payload = payload[:self.max_payload_len]\n\n\
+      \ B\", flush=True)\n            payload = payload[: self.max_payload_len]\n\n\
       \        msg_id = self._msg_id\n        self._msg_id = (self._msg_id + 1) &\
       \ 0xFF\n        n_reps = max(1, min(255, self.repeat_count))\n\n        preamble\
-      \ = bytes([self.preamble_byte]) * self.preamble_len\n        print(f\"[TX] msg\
-      \ #{msg_id} (to peer {self.peer_id}): '{payload.decode('utf-8', 'replace')}'\
-      \ ({n_reps} bursts queued)\", flush=True)\n\n        for rep in range(n_reps):\n\
-      \            header = len(payload).to_bytes(2, \"big\") + bytes([self.peer_id,\
+      \ = bytes([self.preamble_byte]) * self.preamble_len\n        train = TRAIN_WORD\
+      \ if self.train_enable else b\"\"\n        print(\n            f\"[TX] msg #{msg_id}\
+      \ (to peer {self.peer_id}): '{payload.decode('utf-8', 'replace')}' ({n_reps}\
+      \ bursts queued)\",\n            flush=True,\n        )\n\n        for rep in\
+      \ range(n_reps):\n            header = len(payload).to_bytes(2, \"big\") + bytes([self.peer_id,\
       \ msg_id, rep, n_reps])\n            crc = zlib.crc32(header + payload).to_bytes(4,\
-      \ \"big\")\n            frame = preamble + SYNC_WORD + header + payload + crc\n\
-      \n            vec = pmt.init_u8vector(len(frame), list(frame))\n           \
-      \ self.message_port_pub(pmt.intern(\"pdu_out\"), pmt.cons(pmt.PMT_NIL, vec))"
+      \ \"big\")\n\n            # Core frame structure before buffer alignment\n \
+      \           raw_frame = preamble + train + SYNC_WORD + header + payload + crc\n\
+      \n            # Calculate postamble padding required to match buffer_size multiple\n\
+      \            if self.buffer_size > 0:\n                rem = len(raw_frame)\
+      \ % self.buffer_size\n                pad_len = (self.buffer_size - rem) % self.buffer_size\n\
+      \            else:\n                pad_len = 0\n\n            postamble = bytes([self.postamble_byte])\
+      \ * pad_len\n            frame = raw_frame + postamble\n\n            # Build\
+      \ metadata dictionary with tx_sob and tx_eob tags\n            meta = pmt.make_dict()\n\
+      \            meta = pmt.dict_add(meta, pmt.intern(\"tx_sob\"), pmt.PMT_T)\n\
+      \            meta = pmt.dict_add(meta, pmt.intern(\"tx_eob\"), pmt.PMT_T)\n\n\
+      \            # Explicit offset tags for downstream PDU-to-Tagged-Stream conversion\n\
+      \            sob_tag = pmt.make_tuple(pmt.from_long(0), pmt.intern(\"tx_sob\"\
+      ), pmt.PMT_T)\n            eob_tag = pmt.make_tuple(pmt.from_long(len(frame)\
+      \ - 1), pmt.intern(\"tx_eob\"), pmt.PMT_T)\n            extra_tags = pmt.list2(sob_tag,\
+      \ eob_tag)\n            meta = pmt.dict_add(meta, pmt.intern(\"extra_tags\"\
+      ), extra_tags)\n\n            vec = pmt.init_u8vector(len(frame), list(frame))\n\
+      \            self.message_port_pub(pmt.intern(\"pdu_out\"), pmt.cons(meta, vec))\n"
     affinity: ''
     alias: ''
+    buffer_size: BUFFER_SIZE
     comment: ''
     max_payload_len: max_payload_len
     maxoutbuf: '0'
     minoutbuf: '0'
     peer_id: '0'
+    postamble_byte: '0xFF'
     preamble_byte: '0xFF'
     preamble_len: '128'
-    repeat_count: '5'
+    repeat_count: '2'
+    train_enable: '1'
   states:
     _io_cache: ('Packet Framer TX (Burst)', 'PacketFramerTX', [('peer_id', '1'), ('preamble_len',
       '64'), ('repeat_count', '5'), ('max_payload_len', '1024'), ('preamble_byte',
-      '255')], [('msg_in', 'message', 1)], [('pdu_out', 'message', 1)], '', ['max_payload_len',
-      'peer_id', 'preamble_byte', 'preamble_len', 'repeat_count'])
+      '255'), ('buffer_size', '512'), ('postamble_byte', '0'), ('train_enable', '1')],
+      [('msg_in', 'message', 1)], [('pdu_out', 'message', 1)], '', ['buffer_size',
+      'max_payload_len', 'peer_id', 'postamble_byte', 'preamble_byte', 'preamble_len',
+      'repeat_count', 'train_enable'])
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [920, 1744.0]
+    coordinate: [824, 1732.0]
     rotation: 180
     state: enabled
 - name: epy_block_0_0_0
@@ -937,7 +1171,7 @@ blocks:
     alias: ''
     attenuation1: CH_GAIN
     bandwidth: '1500000'
-    buffer_size: int(max_payload_len+34)*32
+    buffer_size: BUFFER_SIZE
     comment: ''
     cyclic: 'False'
     filter: ''
@@ -963,7 +1197,7 @@ blocks:
     alias: ''
     bandwidth: '1500000'
     bbdc: 'True'
-    buffer_size: '2048'
+    buffer_size: BUFFER_SIZE
     comment: ''
     filter: ''
     filter_source: '''Auto'''
@@ -987,13 +1221,26 @@ blocks:
     coordinate: [184, 812.0]
     rotation: 0
     state: enabled
+- name: import_0
+  id: import
+  parameters:
+    alias: ''
+    comment: ''
+    imports: import numpy as np
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [968, 16.0]
+    rotation: 0
+    state: enabled
 - name: note_0
   id: note
   parameters:
     alias: ''
     comment: ''
-    note: 'Rx: Power squelch before AGC, parameters changed, new sink added to observe
-      Rx power'
+    note: 'v3.3: train word (F8 DD 42 58) + corr_est + NLMS equalizer. Tune corr_thr
+      first.'
   states:
     bus_sink: false
     bus_source: false
@@ -1028,7 +1275,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [848, 1592.0]
+    coordinate: [760, 1600.0]
     rotation: 0
     state: enabled
 - name: qtgui_const_sink_x_0
@@ -1234,7 +1481,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1224, 1744.0]
+    coordinate: [1136, 1752.0]
     rotation: 180
     state: enabled
 - name: qtgui_freq_sink_x_0
@@ -1571,7 +1818,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1152, 1592.0]
+    coordinate: [1064, 1600.0]
     rotation: 0
     state: enabled
 - name: virtual_sink_2
@@ -1709,6 +1956,7 @@ connections:
 - [blocks_copy_1_1, '0', blocks_copy_1_0, '0']
 - [blocks_copy_1_2, '0', root_raised_cosine_filter_0, '0']
 - [blocks_copy_2, '0', digital_costas_loop_cc_0, '0']
+- [blocks_copy_2_0, '0', digital_linear_equalizer_0, '0']
 - [blocks_nlog10_ff_0, '0', qtgui_time_sink_x_0, '0']
 - [blocks_skiphead_0, '0', root_raised_cosine_filter_0, '0']
 - [blocks_tag_gate_0_0, '0', iio_pluto_sink_0_0, '0']
@@ -1723,6 +1971,8 @@ connections:
 - [digital_constellation_modulator_0_0_0, '0', blocks_tagged_stream_multiply_length_0,
   '0']
 - [digital_constellation_modulator_0_1, '0', blocks_tag_gate_0_0, '0']
+- [digital_corr_est_cc_0, '0', blocks_tag_debug_corr, '0']
+- [digital_corr_est_cc_0, '0', digital_linear_equalizer_0, '0']
 - [digital_costas_loop_cc_0, '0', qtgui_const_sink_x_1, '0']
 - [digital_costas_loop_cc_0, '0', qtgui_freq_sink_x_1, '0']
 - [digital_costas_loop_cc_0, '0', virtual_sink_3, '0']
@@ -1733,11 +1983,13 @@ connections:
 - [digital_linear_equalizer_0, '0', digital_costas_loop_cc_0, '0']
 - [digital_map_bb_0, '0', blocks_unpack_k_bits_bb_0, '0']
 - [digital_symbol_sync_xx_0, '0', blocks_copy_2, '0']
-- [digital_symbol_sync_xx_0, '0', digital_linear_equalizer_0, '0']
+- [digital_symbol_sync_xx_0, '0', blocks_copy_2_0, '0']
+- [digital_symbol_sync_xx_0, '0', digital_corr_est_cc_0, '0']
 - [epy_block_0_0, pdu_out, pdu_pdu_to_tagged_stream_0_0, pdus]
 - [iio_pluto_source_0, '0', analog_pwr_squelch_xx_0_0, '0']
 - [iio_pluto_source_0, '0', blocks_complex_to_mag_squared_0, '0']
 - [iio_pluto_source_0, '0', blocks_copy_1_1, '0']
+- [pdu_pdu_to_tagged_stream_0_0, '0', blocks_tag_debug_0, '0']
 - [pdu_pdu_to_tagged_stream_0_0, '0', virtual_sink_0_1, '0']
 - [qtgui_edit_box_msg_0_0, msg, epy_block_0_0, msg_in]
 - [root_raised_cosine_filter_0, '0', digital_symbol_sync_xx_0, '0']

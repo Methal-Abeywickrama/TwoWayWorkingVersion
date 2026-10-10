@@ -1,11 +1,10 @@
 """
 Embedded Python Block: Burst Packet Framer TX
 - Outputs packed byte PDUs directly to pdu_pdu_to_tagged_stream
-- Zero idle transmission (idle between bursts = complete silence)
-- Postamble: postamble_len zero bytes after the CRC, so the last real bytes are
-  pushed out of the Pluto sink buffer / RX filters (deframer ignores them)
-- Frame layout: [preamble] [1A CF FC 1D] [len: 2B][dest_id: 1B][msg_id: 1B][rep: 1B][n_reps: 1B] [payload] [CRC32: 4B]
-- CRC32 covers header + payload
+- Zero idle transmission between bursts
+- Frame layout: [preamble] [1A CF FC 1D] [len: 2B][dest_id: 1B][msg_id: 1B][rep: 1B][n_reps: 1B] [payload] [CRC32: 4B] [postamble]
+- Postamble dynamically padded so total size is a multiple of buffer_size
+- Attaches tx_sob (Start of Burst) and tx_eob (End of Burst) metadata tags
 """
 import zlib
 import pmt
@@ -15,8 +14,16 @@ SYNC_WORD = bytes([0x1A, 0xCF, 0xFC, 0x1D])
 
 
 class PacketFramerTX(gr.basic_block):
-    def __init__(self, peer_id=1, preamble_len=64, repeat_count=5, max_payload_len=1024, preamble_byte=0xFF,
-                 postamble_len=160):
+    def __init__(
+        self,
+        peer_id=1,
+        preamble_len=64,
+        repeat_count=5,
+        max_payload_len=1024,
+        preamble_byte=0xFF,
+        buffer_size=512,
+        postamble_byte=0x00,
+    ):
         gr.basic_block.__init__(
             self,
             name="Packet Framer TX (Burst)",
@@ -28,7 +35,8 @@ class PacketFramerTX(gr.basic_block):
         self.repeat_count = int(repeat_count)
         self.max_payload_len = int(max_payload_len)
         self.preamble_byte = int(preamble_byte) & 0xFF
-        self.postamble_len = max(0, int(postamble_len))
+        self.buffer_size = int(buffer_size)
+        self.postamble_byte = int(postamble_byte) & 0xFF
         self._msg_id = 0
 
         self.message_port_register_in(pmt.intern("msg_in"))
@@ -61,19 +69,45 @@ class PacketFramerTX(gr.basic_block):
 
         if len(payload) > self.max_payload_len:
             print(f"[TX] Payload {len(payload)} B truncated to {self.max_payload_len} B", flush=True)
-            payload = payload[:self.max_payload_len]
+            payload = payload[: self.max_payload_len]
 
         msg_id = self._msg_id
         self._msg_id = (self._msg_id + 1) & 0xFF
         n_reps = max(1, min(255, self.repeat_count))
 
         preamble = bytes([self.preamble_byte]) * self.preamble_len
-        print(f"[TX] msg #{msg_id} (to peer {self.peer_id}): {len(payload)} B payload ({n_reps} bursts queued)", flush=True)
+        print(
+            f"[TX] msg #{msg_id} (to peer {self.peer_id}): '{payload.decode('utf-8', 'replace')}' ({n_reps} bursts queued)",
+            flush=True,
+        )
 
         for rep in range(n_reps):
             header = len(payload).to_bytes(2, "big") + bytes([self.peer_id, msg_id, rep, n_reps])
             crc = zlib.crc32(header + payload).to_bytes(4, "big")
-            frame = preamble + SYNC_WORD + header + payload + crc + bytes(self.postamble_len)
+
+            # Core frame structure before buffer alignment
+            raw_frame = preamble + SYNC_WORD + header + payload + crc
+
+            # Calculate postamble padding required to match buffer_size multiple
+            if self.buffer_size > 0:
+                rem = len(raw_frame) % self.buffer_size
+                pad_len = (self.buffer_size - rem) % self.buffer_size
+            else:
+                pad_len = 0
+
+            postamble = bytes([self.postamble_byte]) * pad_len
+            frame = raw_frame + postamble
+
+            # Build metadata dictionary with tx_sob and tx_eob tags
+            meta = pmt.make_dict()
+            meta = pmt.dict_add(meta, pmt.intern("tx_sob"), pmt.PMT_T)
+            meta = pmt.dict_add(meta, pmt.intern("tx_eob"), pmt.PMT_T)
+
+            # Explicit offset tags for downstream PDU-to-Tagged-Stream conversion
+            sob_tag = pmt.make_tuple(pmt.from_long(0), pmt.intern("tx_sob"), pmt.PMT_T)
+            eob_tag = pmt.make_tuple(pmt.from_long(len(frame) - 1), pmt.intern("tx_eob"), pmt.PMT_T)
+            extra_tags = pmt.list2(sob_tag, eob_tag)
+            meta = pmt.dict_add(meta, pmt.intern("extra_tags"), extra_tags)
 
             vec = pmt.init_u8vector(len(frame), list(frame))
-            self.message_port_pub(pmt.intern("pdu_out"), pmt.cons(pmt.PMT_NIL, vec))
+            self.message_port_pub(pmt.intern("pdu_out"), pmt.cons(meta, vec))

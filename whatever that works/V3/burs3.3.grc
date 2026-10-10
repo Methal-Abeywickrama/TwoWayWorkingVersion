@@ -65,6 +65,18 @@ blocks:
     coordinate: [8, 452.0]
     rotation: 0
     state: enabled
+- name: BUFFER_SIZE
+  id: variable
+  parameters:
+    comment: ''
+    value: '4096'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [544, 176.0]
+    rotation: 0
+    state: enabled
 - name: CH_GAIN
   id: variable
   parameters:
@@ -75,6 +87,22 @@ blocks:
     bus_source: false
     bus_structure: null
     coordinate: [424, 88.0]
+    rotation: 0
+    state: enabled
+- name: MIN_TAIL
+  id: variable
+  parameters:
+    comment: 'Bytes after the CRC so the modulator''s
+
+      RRC filter (~22 symbols) has sent the
+
+      last bit before the gate blanks.'
+    value: '8'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1136, 40.0]
     rotation: 0
     state: enabled
 - name: MY_ID
@@ -119,6 +147,60 @@ blocks:
     bus_source: false
     bus_structure: null
     coordinate: [320, 92.0]
+    rotation: 0
+    state: enabled
+- name: TX_BUFFER
+  id: variable
+  parameters:
+    comment: 'Pluto TX buffer (samples). Must be a
+
+      multiple of 32 (8 bits x sps). The framer
+
+      fills every burst to whole buffers.'
+    value: BUFFER_SIZE * sps
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1016, 40.0]
+    rotation: 0
+    state: enabled
+- name: TX_HOLD_MS
+  id: variable
+  parameters:
+    comment: 'Extra wait (ms) after the queued
+
+      buffers before TX off'
+    value: '5.0'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1496, 40.0]
+    rotation: 0
+    state: enabled
+- name: TX_OFF_ATTEN
+  id: variable
+  parameters:
+    comment: TX attenuation when off (dB, max 89.75)
+    value: '89.75'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1376, 40.0]
+    rotation: 0
+    state: enabled
+- name: TX_OFF_MODE
+  id: variable
+  parameters:
+    comment: '''atten'' | ''lo'' | ''both'' | ''none'''
+    value: '''atten'''
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1256, 40.0]
     rotation: 0
     state: enabled
 - name: adpt_alg
@@ -178,7 +260,7 @@ blocks:
   id: variable
   parameters:
     comment: ''
-    value: '1024'
+    value: '2048'
   states:
     bus_sink: false
     bus_source: false
@@ -198,7 +280,7 @@ blocks:
     start: '-100'
     step: '1'
     stop: '0'
-    value: '-40'
+    value: '-35'
     widget: counter_slider
   states:
     bus_sink: false
@@ -488,6 +570,25 @@ blocks:
     coordinate: [1256, 824.0]
     rotation: 0
     state: disabled
+- name: blocks_tag_debug_0
+  id: blocks_tag_debug
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    display: 'True'
+    filter: '""'
+    name: ''
+    num_inputs: '1'
+    type: byte
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1072, 1656.0]
+    rotation: 0
+    state: enabled
 - name: blocks_tag_gate_0_0
   id: blocks_tag_gate
   parameters:
@@ -505,25 +606,6 @@ blocks:
     bus_source: false
     bus_structure: null
     coordinate: [1152, 360.0]
-    rotation: 0
-    state: enabled
-- name: blocks_tagged_stream_multiply_length_0
-  id: blocks_tagged_stream_multiply_length
-  parameters:
-    affinity: ''
-    alias: ''
-    c: '32'
-    comment: ''
-    lengthtagname: '''packet_len'''
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    type: complex
-    vlen: '1'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [1136, 560.0]
     rotation: 0
     state: disabled
 - name: blocks_unpack_k_bits_bb_0
@@ -773,63 +855,108 @@ blocks:
 - name: epy_block_0_0
   id: epy_block
   parameters:
-    _source_code: "\"\"\"\nEmbedded Python Block: Burst Packet Framer TX\n- Outputs\
-      \ packed byte PDUs directly to pdu_pdu_to_tagged_stream\n- Zero idle transmission\
-      \ (idle between bursts = complete silence)\n- Zero postamble / trailing idle\n\
-      - Frame layout: [preamble] [1A CF FC 1D] [len: 2B][dest_id: 1B][msg_id: 1B][rep:\
-      \ 1B][n_reps: 1B] [payload] [CRC32: 4B]\n- CRC32 covers header + payload\n\"\
-      \"\"\nimport zlib\nimport pmt\nfrom gnuradio import gr\n\nSYNC_WORD = bytes([0x1A,\
-      \ 0xCF, 0xFC, 0x1D])\n\n\nclass PacketFramerTX(gr.basic_block):\n    def __init__(self,\
-      \ peer_id=1, preamble_len=64, repeat_count=5, max_payload_len=1024, preamble_byte=0xFF):\n\
-      \        gr.basic_block.__init__(\n            self,\n            name=\"Packet\
-      \ Framer TX (Burst)\",\n            in_sig=None,\n            out_sig=None,\n\
-      \        )\n        self.peer_id = int(peer_id) & 0xFF\n        self.preamble_len\
-      \ = int(preamble_len)\n        self.repeat_count = int(repeat_count)\n     \
-      \   self.max_payload_len = int(max_payload_len)\n        self.preamble_byte\
-      \ = int(preamble_byte) & 0xFF\n        self._msg_id = 0\n\n        self.message_port_register_in(pmt.intern(\"\
+    _source_code: "\"\"\"\nEmbedded Python Block: Burst Packet Framer TX (buffer-aligned)\n\
+      \nSame frame format as before, so the deframer and the other PC are unchanged:\n\
+      \  [preamble][1A CF FC 1D][len:2][dest:1][msg_id:1][rep:1][n_reps:1][payload][CRC32:4][tail][pad]\n\
+      \n  tail  min_tail bytes (default 8). The Constellation Modulator's pulse-shaping\
+      \ filter\n        delays the signal by about 22 symbols (88 samples at sps=4),\
+      \ so the last CRC bits\n        only leave the modulator once a few more bytes\
+      \ have gone in after them.\n  pad   fills the burst up to a whole number of\
+      \ Pluto TX buffers, so the sink pushes the\n        whole burst at once and\
+      \ nothing is left waiting in the sink.\n\n        samples per byte = (8 / bits_per_symbol)\
+      \ * sps         (BPSK, sps 4: 32)\n        pad unit (bytes) = tx_buffer / samples\
+      \ per byte          (4096 samples: 128 bytes)\n        tx_buffer must be the\
+      \ Pluto sink's buffer size and a multiple of samples per byte.\n\nEvery burst\
+      \ PDU carries this metadata. PDU to Tagged Stream turns each entry into a stream\n\
+      tag on the burst's first byte; after the modulator the tags sit on the burst's\
+      \ first sample:\n  tx_sob      True\n  burst_data  number of samples that carry\
+      \ the frame (preamble ... tail)\n  burst_len   number of samples in the whole\
+      \ burst (always n * tx_buffer)\nThe TX Burst Gate block reads these tags, blanks\
+      \ the pad and switches the transmitter off.\n\"\"\"\nimport zlib\nimport pmt\n\
+      from gnuradio import gr\n\nSYNC_WORD = bytes([0x1A, 0xCF, 0xFC, 0x1D])\nHDR_BYTES\
+      \ = 6\n\n\nclass PacketFramerTX(gr.basic_block):\n    def __init__(self, peer_id=1,\
+      \ preamble_len=512, repeat_count=1, max_payload_len=8192,\n                \
+      \ preamble_byte=0xFF, tx_buffer=4096, sps=4, bits_per_symbol=1,\n          \
+      \       min_tail=8, pad_byte=0x00):\n        gr.basic_block.__init__(self, name=\"\
+      Packet Framer TX (Buffer-aligned Burst)\",\n                               \
+      \ in_sig=None, out_sig=None)\n        self.peer_id = int(peer_id) & 0xFF\n \
+      \       self.preamble_len = int(preamble_len)\n        self.repeat_count = int(repeat_count)\n\
+      \        self.max_payload_len = min(int(max_payload_len), 0xFFFF)\n        self.preamble_byte\
+      \ = int(preamble_byte) & 0xFF\n        self.tx_buffer = int(tx_buffer)\n   \
+      \     self.sps = int(sps)\n        self.bits_per_symbol = int(bits_per_symbol)\n\
+      \        self.min_tail = max(0, int(min_tail))\n        self.pad_byte = int(pad_byte)\
+      \ & 0xFF\n        self._msg_id = 0\n        self._unit()                   \
+      \   # fail early (in GRC) on a bad tx_buffer / sps\n\n        self.message_port_register_in(pmt.intern(\"\
       msg_in\"))\n        self.set_msg_handler(pmt.intern(\"msg_in\"), self.handle_msg)\n\
-      \        self.message_port_register_out(pmt.intern(\"pdu_out\"))\n\n    @staticmethod\n\
-      \    def _extract_payload(msg):\n        if pmt.is_pair(msg):\n            data\
-      \ = pmt.cdr(msg)\n            if pmt.is_u8vector(data):\n                return\
-      \ bytes(pmt.u8vector_elements(data))\n            return str(pmt.to_python(data)).encode(\"\
-      utf-8\")\n        if pmt.is_symbol(msg):\n            return pmt.symbol_to_string(msg).encode(\"\
-      utf-8\")\n        val = pmt.to_python(msg)\n        if isinstance(val, (bytes,\
-      \ bytearray)):\n            return bytes(val)\n        return str(val).encode(\"\
-      utf-8\")\n\n    def handle_msg(self, msg):\n        try:\n            payload\
-      \ = self._extract_payload(msg)\n        except Exception as e:\n           \
-      \ print(f\"[TX] Could not parse message: {e}\", flush=True)\n            return\n\
-      \n        if not payload:\n            return\n\n        if len(payload) > self.max_payload_len:\n\
-      \            print(f\"[TX] Payload {len(payload)} B truncated to {self.max_payload_len}\
-      \ B\", flush=True)\n            payload = payload[:self.max_payload_len]\n\n\
-      \        msg_id = self._msg_id\n        self._msg_id = (self._msg_id + 1) &\
-      \ 0xFF\n        n_reps = max(1, min(255, self.repeat_count))\n\n        preamble\
-      \ = bytes([self.preamble_byte]) * self.preamble_len\n        print(f\"[TX] msg\
-      \ #{msg_id} (to peer {self.peer_id}): '{payload.decode('utf-8', 'replace')}'\
-      \ ({n_reps} bursts queued)\", flush=True)\n\n        for rep in range(n_reps):\n\
-      \            header = len(payload).to_bytes(2, \"big\") + bytes([self.peer_id,\
-      \ msg_id, rep, n_reps])\n            crc = zlib.crc32(header + payload).to_bytes(4,\
-      \ \"big\")\n            frame = preamble + SYNC_WORD + header + payload + crc\n\
-      \n            vec = pmt.init_u8vector(len(frame), list(frame))\n           \
-      \ self.message_port_pub(pmt.intern(\"pdu_out\"), pmt.cons(pmt.PMT_NIL, vec))"
+      \        self.message_port_register_out(pmt.intern(\"pdu_out\"))\n\n    # samples\
+      \ per byte and pad unit in bytes (re-read every frame, so GRC callbacks work)\n\
+      \    def _unit(self):\n        if self.bits_per_symbol not in (1, 2, 4, 8):\n\
+      \            raise ValueError(\"bits_per_symbol must be 1, 2, 4 or 8\")\n  \
+      \      spb = (8 // self.bits_per_symbol) * self.sps\n        if self.tx_buffer\
+      \ <= 0 or self.tx_buffer % spb:\n            raise ValueError(f\"tx_buffer ({self.tx_buffer})\
+      \ must be a positive multiple of \"\n                             f\"{spb} samples\
+      \ (8/bits_per_symbol * sps)\")\n        return spb, self.tx_buffer // spb\n\n\
+      \    @staticmethod\n    def _extract_payload(msg):\n        if pmt.is_pair(msg):\n\
+      \            data = pmt.cdr(msg)\n            if pmt.is_u8vector(data):\n  \
+      \              return bytes(pmt.u8vector_elements(data))\n            return\
+      \ str(pmt.to_python(data)).encode(\"utf-8\")\n        if pmt.is_symbol(msg):\n\
+      \            return pmt.symbol_to_string(msg).encode(\"utf-8\")\n        val\
+      \ = pmt.to_python(msg)\n        if isinstance(val, (bytes, bytearray)):\n  \
+      \          return bytes(val)\n        return str(val).encode(\"utf-8\")\n\n\
+      \    def build_burst(self, payload, msg_id, rep, n_reps):\n        \"\"\"Returns\
+      \ (burst bytes, data samples, total samples).\"\"\"\n        spb, unit = self._unit()\n\
+      \        header = len(payload).to_bytes(2, \"big\") + bytes([self.peer_id, msg_id,\
+      \ rep, n_reps])\n        crc = zlib.crc32(header + payload).to_bytes(4, \"big\"\
+      )\n        body = (bytes([self.preamble_byte]) * self.preamble_len + SYNC_WORD\
+      \ + header + payload\n                + crc + bytes(self.min_tail))\n      \
+      \  pad = (-len(body)) % unit\n        burst = body + bytes([self.pad_byte])\
+      \ * pad\n        return burst, len(body) * spb, len(burst) * spb\n\n    def\
+      \ handle_msg(self, msg):\n        try:\n            payload = self._extract_payload(msg)\n\
+      \        except Exception as e:\n            print(f\"[TX] Could not parse message:\
+      \ {e}\", flush=True)\n            return\n        if not payload:\n        \
+      \    return\n        if len(payload) > self.max_payload_len:\n            print(f\"\
+      [TX] Payload {len(payload)} B truncated to {self.max_payload_len} B\", flush=True)\n\
+      \            payload = payload[:self.max_payload_len]\n\n        msg_id = self._msg_id\n\
+      \        self._msg_id = (self._msg_id + 1) & 0xFF\n        n_reps = max(1, min(255,\
+      \ self.repeat_count))\n\n        for rep in range(n_reps):\n            burst,\
+      \ data_samps, total_samps = self.build_burst(payload, msg_id, rep, n_reps)\n\
+      \            if rep == 0:\n                nbuf = total_samps // self.tx_buffer\n\
+      \                print(f\"[TX] msg #{msg_id} (to peer {self.peer_id}): {len(payload)}\
+      \ B payload, \"\n                      f\"burst {len(burst)} B = {nbuf} x {self.tx_buffer}\
+      \ samples \"\n                      f\"(signal {data_samps}, blank {total_samps\
+      \ - data_samps}), \"\n                      f\"{n_reps} burst(s)\", flush=True)\n\
+      \            meta = pmt.make_dict()\n            meta = pmt.dict_add(meta, pmt.intern(\"\
+      tx_sob\"), pmt.PMT_T)\n            meta = pmt.dict_add(meta, pmt.intern(\"burst_data\"\
+      ), pmt.from_long(data_samps))\n            meta = pmt.dict_add(meta, pmt.intern(\"\
+      burst_len\"), pmt.from_long(total_samps))\n            vec = pmt.init_u8vector(len(burst),\
+      \ list(burst))\n            self.message_port_pub(pmt.intern(\"pdu_out\"), pmt.cons(meta,\
+      \ vec))\n"
     affinity: ''
     alias: ''
+    bits_per_symbol: '1'
     comment: ''
-    max_payload_len: max_payload_len
+    max_payload_len: '8192'
     maxoutbuf: '0'
+    min_tail: MIN_TAIL
     minoutbuf: '0'
-    peer_id: '0'
+    pad_byte: '0'
+    peer_id: 1-MY_ID
     preamble_byte: '0xFF'
     preamble_len: '128'
     repeat_count: '5'
+    sps: sps
+    tx_buffer: TX_BUFFER
   states:
-    _io_cache: ('Packet Framer TX (Burst)', 'PacketFramerTX', [('peer_id', '1'), ('preamble_len',
-      '64'), ('repeat_count', '5'), ('max_payload_len', '1024'), ('preamble_byte',
-      '255')], [('msg_in', 'message', 1)], [('pdu_out', 'message', 1)], '', ['max_payload_len',
-      'peer_id', 'preamble_byte', 'preamble_len', 'repeat_count'])
+    _io_cache: ('Packet Framer TX (Buffer-aligned Burst)', 'PacketFramerTX', [('peer_id',
+      '1'), ('preamble_len', '512'), ('repeat_count', '1'), ('max_payload_len', '8192'),
+      ('preamble_byte', '255'), ('tx_buffer', '4096'), ('sps', '4'), ('bits_per_symbol',
+      '1'), ('min_tail', '8'), ('pad_byte', '0')], [('msg_in', 'message', 1)], [('pdu_out',
+      'message', 1)], '', ['bits_per_symbol', 'max_payload_len', 'min_tail', 'pad_byte',
+      'peer_id', 'preamble_byte', 'preamble_len', 'repeat_count', 'sps', 'tx_buffer'])
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [920, 1744.0]
+    coordinate: [824, 1756.0]
     rotation: 180
     state: enabled
 - name: epy_block_0_0_0
@@ -930,6 +1057,188 @@ blocks:
     coordinate: [376, 1736.0]
     rotation: 180
     state: enabled
+- name: epy_block_txgate
+  id: epy_block
+  parameters:
+    _source_code: "\"\"\"\nEmbedded Python Block: TX Burst Gate (place between the\
+      \ Constellation Modulator and the\nPlutoSDR Sink). It acts on the burst tags\
+      \ of the buffer-aligned framer:\n\n  tx_sob + burst_data + burst_len   (on the\
+      \ first sample of every burst)\n\n1. Before the first sample of a burst is passed\
+      \ on, the transmitter is switched ON\n   (synchronously, so no burst sample\
+      \ can reach the radio while it is still off).\n2. The samples after `burst_data`\
+      \ (the pad that fills the last Pluto buffer) are set to 0,\n   with a short\
+      \ ramp, so nothing is radiated there. The burst stays n * tx_buffer samples\n\
+      \   long, so the sink still sends it out immediately.\n3. A sample-accurate\
+      \ `tx_eob` tag is put on the last signal sample (plus `tx_sob` on the\n   first\
+      \ one) for anything downstream that understands them.\n4. When `tx_eob` passes,\
+      \ the transmitter is switched OFF after `hold` seconds:\n       hold = (kernel_buffers\
+      \ + 3) * tx_buffer / samp_rate + hold_ms / 1000\n   That covers every sample\
+      \ that can still be queued between this block and the antenna\n   (GNU Radio\
+      \ buffer ~2 x tx_buffer, the sink's own buffer, libiio's kernel buffers).\n\
+      \   A new burst cancels a pending OFF. GNU Radio never says when the radio has\
+      \ really sent\n   the last sample, so this delay is an upper bound; during it\
+      \ only zeros are sent.\n\nmode (how \"off\" is done, through libiio on the same\
+      \ URI as the Pluto sink):\n  'atten'  TX attenuation -> off_atten (89.75 dB\
+      \ = the AD9361 maximum); on -> on_atten\n           (keep on_atten = the Pluto\
+      \ sink's attenuation, e.g. CH_GAIN)\n  'lo'     power down the TX LO (no carrier/LO\
+      \ leakage at all); power up again for a burst.\n           The 512+ byte preamble\
+      \ covers the LO lock time.\n  'both'   both of the above\n  'none'   only blanking\
+      \ + tags (no radio control)\nNeeds the libiio Python bindings (`import iio`;\
+      \ Ubuntu/Debian: sudo apt install python3-libiio).\nWithout them it prints a\
+      \ warning and keeps working in 'none' mode.\n\nIf bursts arrive WITHOUT tags\
+      \ (e.g. a Tag Gate in front of this block), the gate switches the\nTX on as\
+      \ soon as non-zero samples show up and off again after `hold`, and warns once.\n\
+      \"\"\"\nimport threading\nimport time\n\nimport numpy as np\nimport pmt\nfrom\
+      \ gnuradio import gr\n\nAD9361_MAX_ATTEN = 89.75\n\n\nclass TxBurstGate(gr.sync_block):\n\
+      \    def __init__(self, uri=\"ip:192.168.1.10\", samp_rate=1.5e6, tx_buffer=4096,\n\
+      \                 on_atten=20.0, off_atten=89.75, mode=\"atten\", kernel_buffers=4,\n\
+      \                 hold_ms=5.0, ramp=64, verbose=True):\n        gr.sync_block.__init__(self,\
+      \ name=\"TX Burst Gate\",\n                               in_sig=[np.complex64],\
+      \ out_sig=[np.complex64])\n        self.set_tag_propagation_policy(gr.TPP_DONT)\
+      \   # tags are re-made below, sample exact\n        self.uri = str(uri)\n  \
+      \      self.samp_rate = float(samp_rate)\n        self.tx_buffer = int(tx_buffer)\n\
+      \        self.on_atten = float(on_atten)\n        self.off_atten = float(off_atten)\n\
+      \        self.mode = str(mode).lower()\n        self.kernel_buffers = int(kernel_buffers)\n\
+      \        self.hold_ms = float(hold_ms)\n        self.ramp = max(0, int(ramp))\n\
+      \        self.verbose = bool(verbose)\n        if self.mode not in (\"atten\"\
+      , \"lo\", \"both\", \"none\"):\n            raise ValueError(\"mode must be\
+      \ 'atten', 'lo', 'both' or 'none'\")\n\n        self._lock = threading.RLock()\n\
+      \        self._bursts = []          # [start, data_end, end, eob_done] absolute\
+      \ sample offsets\n        self._timer = None\n        self._gen = 0        \
+      \      # bumped by every burst start; a stale OFF timer sees it\n        self._on\
+      \ = None            # None = unknown, True = transmitting, False = off\n   \
+      \     self._phy = None\n        self._tx_chans = []\n        self._lo = None\n\
+      \        self._warned_untagged = False\n        self.n_bursts = 0\n        self.n_off\
+      \ = 0\n\n    # -------------------------------------------------------------\
+      \ radio control\n    def _hold_s(self):\n        return (self.kernel_buffers\
+      \ + 3) * self.tx_buffer / self.samp_rate + self.hold_ms / 1000.0\n\n    def\
+      \ _open(self):\n        if self.mode == \"none\":\n            return\n    \
+      \    try:\n            import iio\n        except ImportError:\n           \
+      \ print(\"[TXGATE] libiio Python bindings not found (sudo apt install python3-libiio)\
+      \ \"\n                  \"- TX on/off control DISABLED, blanking + tags still\
+      \ work\", flush=True)\n            self.mode = \"none\"\n            return\n\
+      \        try:\n            ctx = iio.Context(self.uri) if self.uri else iio.Context()\n\
+      \            phy = ctx.find_device(\"ad9361-phy\")\n            if phy is None:\n\
+      \                raise RuntimeError(\"no ad9361-phy device at \" + self.uri)\n\
+      \            self._ctx, self._phy = ctx, phy\n            self._tx_chans = [c\
+      \ for c in (phy.find_channel(\"voltage0\", True),\n                        \
+      \                  phy.find_channel(\"voltage1\", True))\n                 \
+      \             if c is not None and \"hardwaregain\" in c.attrs]\n          \
+      \  self._lo = phy.find_channel(\"altvoltage1\", True)        # TX_LO\n     \
+      \       if self._lo is not None and \"powerdown\" not in self._lo.attrs:\n \
+      \               self._lo = None\n            print(f\"[TXGATE] radio control\
+      \ on {self.uri}: mode={self.mode}, \"\n                  f\"off={self.off_atten}\
+      \ dB, hold={self._hold_s() * 1000:.1f} ms\", flush=True)\n        except Exception\
+      \ as e:\n            print(f\"[TXGATE] could not open {self.uri} for TX control\
+      \ ({e}) - \"\n                  \"TX on/off control DISABLED, blanking + tags\
+      \ still work\", flush=True)\n            self.mode = \"none\"\n\n    def _write(self,\
+      \ chan, attr, value):\n        try:\n            chan.attrs[attr].value = value\n\
+      \        except Exception as e:\n            print(f\"[TXGATE] write {attr}={value}\
+      \ failed: {e}\", flush=True)\n\n    def _set_tx(self, on):\n        \"\"\"Switch\
+      \ the transmitter on/off. Caller holds self._lock.\"\"\"\n        if self._on\
+      \ is on:\n            return\n        t0 = time.time()\n        if self.mode\
+      \ in (\"lo\", \"both\") and self._lo is not None:\n            self._write(self._lo,\
+      \ \"powerdown\", \"0\" if on else \"1\")\n        if self.mode in (\"atten\"\
+      , \"both\"):\n            att = self.on_atten if on else min(abs(self.off_atten),\
+      \ AD9361_MAX_ATTEN)\n            for c in self._tx_chans:\n                self._write(c,\
+      \ \"hardwaregain\", f\"{-abs(att):.2f}\")\n        self._on = on\n        if\
+      \ not on:\n            self.n_off += 1\n        if self.verbose and self.mode\
+      \ != \"none\" and self.n_bursts <= 3:\n            print(f\"[TXGATE] TX {'ON\
+      \ ' if on else 'OFF'} ({(time.time() - t0) * 1000:.1f} ms)\",\n            \
+      \      flush=True)\n\n    def _off_later(self, delay):\n        with self._lock:\n\
+      \            if self._timer is not None:\n                self._timer.cancel()\n\
+      \            gen = self._gen\n            self._timer = threading.Timer(delay,\
+      \ self._off_timer, args=[gen])\n            self._timer.daemon = True\n    \
+      \        self._timer.start()\n\n    def _off_timer(self, gen):\n        with\
+      \ self._lock:\n            if gen == self._gen and not self._bursts_pending():\n\
+      \                self._set_tx(False)\n\n    def _bursts_pending(self):\n   \
+      \     # a burst whose signal part has not fully passed yet keeps the TX on\n\
+      \        return any(not b[3] for b in self._bursts)\n\n    def start(self):\n\
+      \        self._open()\n        with self._lock:\n            self._set_tx(False)\
+      \          # idle = off\n        return True\n\n    def stop(self):\n      \
+      \  with self._lock:\n            if self._timer is not None:\n             \
+      \   self._timer.cancel()\n            if self.mode != \"none\":\n          \
+      \      # leave the radio as the Pluto sink configured it\n                self._on\
+      \ = None\n                self._set_tx(True)\n        return True\n\n    # -------------------------------------------------------------\
+      \ stream\n    def _ramp(self, n):\n        return (0.5 - 0.5 * np.cos(np.pi\
+      \ * (np.arange(n) + 0.5) / n)).astype(np.float32)\n\n    def work(self, input_items,\
+      \ output_items):\n        inp, out = input_items[0], output_items[0]\n     \
+      \   n = len(inp)\n        base = self.nitems_read(0)\n        out[:] = inp\n\
+      \n        # 1) new bursts from the framer's tags (all three sit on the burst's\
+      \ first sample)\n        found = {}\n        for t in self.get_tags_in_window(0,\
+      \ 0, n):\n            key = pmt.symbol_to_string(t.key)\n            if key\
+      \ in (\"burst_data\", \"burst_len\", \"tx_sob\"):\n                d = found.setdefault(t.offset,\
+      \ {})\n                if key != \"tx_sob\":\n                    d[key] = pmt.to_long(t.value)\n\
+      \        for off in sorted(found):\n            d = found[off]\n           \
+      \ if \"burst_len\" not in d:\n                continue\n            data = min(int(d.get(\"\
+      burst_data\", d[\"burst_len\"])), int(d[\"burst_len\"]))\n            with self._lock:\n\
+      \                self._gen += 1                       # cancels any pending\
+      \ OFF\n                if self._timer is not None:\n                    self._timer.cancel()\n\
+      \                    self._timer = None\n                self._set_tx(True)\
+      \                   # ON before the first sample leaves here\n             \
+      \   self._bursts.append([off, off + data, off + int(d[\"burst_len\"]), False])\n\
+      \                self.n_bursts += 1\n            if off % self.tx_buffer and\
+      \ self.verbose:\n                print(f\"[TXGATE] warning: burst starts at\
+      \ sample {off}, not on a \"\n                      f\"{self.tx_buffer}-sample\
+      \ boundary (tx_buffer must equal the sink's \"\n                      \"buffer\
+      \ size, and nothing else may feed the modulator)\", flush=True)\n          \
+      \  self.add_item_tag(0, off, pmt.intern(\"tx_sob\"), pmt.PMT_T)\n\n        #\
+      \ 2) blank the pad, ramp the edges, tag the end, schedule OFF\n        r = self._ramp(self.ramp)\
+      \ if self.ramp else None\n        done = []\n        with self._lock:\n    \
+      \        tagged = bool(self._bursts)\n            for b in self._bursts:\n \
+      \               start, dend, end, eob = b\n                lo, hi = base, base\
+      \ + n\n                if r is not None:\n                    # ramp up over\
+      \ the first `ramp` samples, ramp down over the last `ramp` signal samples\n\
+      \                    for (a, w) in ((start, r), (dend - self.ramp, r[::-1])):\n\
+      \                        s, e = max(a, lo), min(a + len(w), hi)\n          \
+      \              if s < e:\n                            out[s - lo:e - lo] *=\
+      \ w[s - a:e - a]\n                s, e = max(dend, lo), min(end, hi)\n     \
+      \           if s < e:\n                    out[s - lo:e - lo] = 0\n        \
+      \        if not eob and lo <= dend - 1 < hi:\n                    self.add_item_tag(0,\
+      \ dend - 1, pmt.intern(\"tx_eob\"), pmt.PMT_T)\n                    b[3] = True\n\
+      \                    if self.mode != \"none\":\n                        self._off_later(self._hold_s())\n\
+      \                if end <= hi and b[3]:\n                    done.append(b)\n\
+      \            for b in done:\n                self._bursts.remove(b)\n\n    \
+      \    # 3) safety net: signal without tags (tags stripped upstream)\n       \
+      \ if not tagged and self.mode != \"none\" and np.any(inp != 0):\n          \
+      \  if not self._warned_untagged:\n                print(\"[TXGATE] signal without\
+      \ burst tags (is a Tag Gate in front of this \"\n                      \"block?)\
+      \ - switching TX on for it, no blanking\", flush=True)\n                self._warned_untagged\
+      \ = True\n            with self._lock:\n                self._gen += 1\n   \
+      \             self._set_tx(True)\n            self._off_later(self._hold_s())\n\
+      \        return n\n"
+    affinity: ''
+    alias: ''
+    comment: 'TX Burst Gate: TX on before each burst,
+
+      blank pad after tx_eob, TX off after hold.
+
+      mode TX_OFF_MODE: ''atten'' | ''lo'' | ''both'' | ''none'''
+    hold_ms: TX_HOLD_MS
+    kernel_buffers: '4'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    mode: TX_OFF_MODE
+    off_atten: TX_OFF_ATTEN
+    on_atten: CH_GAIN
+    ramp: '64'
+    samp_rate: samp_rate
+    tx_buffer: TX_BUFFER
+    uri: ADDR
+    verbose: 'True'
+  states:
+    _io_cache: ('TX Burst Gate', 'TxBurstGate', [('uri', "'ip:192.168.1.10'"), ('samp_rate',
+      '1500000.0'), ('tx_buffer', '4096'), ('on_atten', '20.0'), ('off_atten', '89.75'),
+      ('mode', "'atten'"), ('kernel_buffers', '4'), ('hold_ms', '5.0'), ('ramp', '64'),
+      ('verbose', 'True')], [('0', 'complex', 1)], [('0', 'complex', 1)], '', ['hold_ms',
+      'kernel_buffers', 'mode', 'off_atten', 'on_atten', 'ramp', 'samp_rate', 'tx_buffer',
+      'uri', 'verbose'])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1152, 460.0]
+    rotation: 0
+    state: enabled
 - name: iio_pluto_sink_0_0
   id: iio_pluto_sink
   parameters:
@@ -937,7 +1246,7 @@ blocks:
     alias: ''
     attenuation1: CH_GAIN
     bandwidth: '1500000'
-    buffer_size: int(max_payload_len+34)*32
+    buffer_size: BUFFER_SIZE
     comment: ''
     cyclic: 'False'
     filter: ''
@@ -963,7 +1272,7 @@ blocks:
     alias: ''
     bandwidth: '1500000'
     bbdc: 'True'
-    buffer_size: '2048'
+    buffer_size: BUFFER_SIZE
     comment: ''
     filter: ''
     filter_source: '''Auto'''
@@ -1028,7 +1337,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [848, 1592.0]
+    coordinate: [760, 1592.0]
     rotation: 0
     state: enabled
 - name: qtgui_const_sink_x_0
@@ -1234,7 +1543,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1224, 1744.0]
+    coordinate: [1184, 1800.0]
     rotation: 180
     state: enabled
 - name: qtgui_freq_sink_x_0
@@ -1571,7 +1880,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1152, 1592.0]
+    coordinate: [1064, 1592.0]
     rotation: 0
     state: enabled
 - name: virtual_sink_2
@@ -1713,15 +2022,12 @@ connections:
 - [blocks_skiphead_0, '0', root_raised_cosine_filter_0, '0']
 - [blocks_tag_gate_0_0, '0', iio_pluto_sink_0_0, '0']
 - [blocks_tag_gate_0_0, '0', virtual_sink_5_0, '0']
-- [blocks_tagged_stream_multiply_length_0, '0', iio_pluto_sink_0_0, '0']
-- [blocks_tagged_stream_multiply_length_0, '0', virtual_sink_5_0, '0']
 - [blocks_unpack_k_bits_bb_0, '0', virtual_sink_2, '0']
 - [blocks_unpack_k_bits_bb_0_0, '0', virtual_sink_2_0, '0']
 - [digital_constellation_decoder_cb_0, '0', digital_diff_decoder_bb_0, '0']
 - [digital_constellation_decoder_cb_0_0, '0', digital_diff_decoder_bb_0_0, '0']
 - [digital_constellation_modulator_0_0_0, '0', blocks_tag_gate_0_0, '0']
-- [digital_constellation_modulator_0_0_0, '0', blocks_tagged_stream_multiply_length_0,
-  '0']
+- [digital_constellation_modulator_0_0_0, '0', epy_block_txgate, '0']
 - [digital_constellation_modulator_0_1, '0', blocks_tag_gate_0_0, '0']
 - [digital_costas_loop_cc_0, '0', qtgui_const_sink_x_1, '0']
 - [digital_costas_loop_cc_0, '0', qtgui_freq_sink_x_1, '0']
@@ -1735,9 +2041,12 @@ connections:
 - [digital_symbol_sync_xx_0, '0', blocks_copy_2, '0']
 - [digital_symbol_sync_xx_0, '0', digital_linear_equalizer_0, '0']
 - [epy_block_0_0, pdu_out, pdu_pdu_to_tagged_stream_0_0, pdus]
+- [epy_block_txgate, '0', iio_pluto_sink_0_0, '0']
+- [epy_block_txgate, '0', virtual_sink_5_0, '0']
 - [iio_pluto_source_0, '0', analog_pwr_squelch_xx_0_0, '0']
 - [iio_pluto_source_0, '0', blocks_complex_to_mag_squared_0, '0']
 - [iio_pluto_source_0, '0', blocks_copy_1_1, '0']
+- [pdu_pdu_to_tagged_stream_0_0, '0', blocks_tag_debug_0, '0']
 - [pdu_pdu_to_tagged_stream_0_0, '0', virtual_sink_0_1, '0']
 - [qtgui_edit_box_msg_0_0, msg, epy_block_0_0, msg_in]
 - [root_raised_cosine_filter_0, '0', digital_symbol_sync_xx_0, '0']
