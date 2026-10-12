@@ -81,7 +81,7 @@ blocks:
   id: variable
   parameters:
     comment: ''
-    value: '0'
+    value: '1'
   states:
     bus_sink: false
     bus_source: false
@@ -440,7 +440,7 @@ blocks:
     bus_structure: null
     coordinate: [1200, 416.0]
     rotation: 0
-    state: disabled
+    state: enabled
 - name: blocks_tagged_stream_multiply_length_0
   id: blocks_tagged_stream_multiply_length
   parameters:
@@ -459,7 +459,7 @@ blocks:
     bus_structure: null
     coordinate: [1136, 560.0]
     rotation: 0
-    state: enabled
+    state: disabled
 - name: blocks_unpack_k_bits_bb_0
   id: blocks_unpack_k_bits_bb
   parameters:
@@ -751,9 +751,9 @@ blocks:
     max_payload_len: '8196'
     maxoutbuf: '0'
     minoutbuf: '0'
-    peer_id: '1'
+    peer_id: '0'
     preamble_byte: '0xFF'
-    preamble_len: '128'
+    preamble_len: '512'
     repeat_count: '5'
   states:
     _io_cache: ('Packet Framer TX (Burst)', 'PacketFramerTX', [('peer_id', '1'), ('preamble_len',
@@ -877,9 +877,9 @@ blocks:
     filter: ''
     filter_source: '''Auto'''
     fpass: '0'
-    frequency: int(2.437e9)
+    frequency: int(905e6)
     fstop: '0'
-    len_tag_key: '''packet_len'''
+    len_tag_key: ''
     samplerate: int(samp_rate)
     type: fc32
     uri: ADDR
@@ -902,7 +902,7 @@ blocks:
     filter: ''
     filter_source: '''Auto'''
     fpass: '0'
-    frequency: int(2.412e9)
+    frequency: int(920e6)
     fstop: '0'
     gain1: '''slow_attack'''
     len_tag_key: packet_len

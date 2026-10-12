@@ -1,51 +1,101 @@
-import struct, pmt
+"""
+Embedded Python Block: Burst Pad (fixed-length zero fill)
+
+Pads every modulated burst with ZERO SAMPLES (silence, not modulated bytes) up to a fixed
+length, so each burst is exactly as long as the Pluto/ANTSDR sink buffer. The gr-iio sink in
+tagged mode only accepts packets whose length equals its buffer_size.
+
+Message ports (PDUs of complex samples):
+    pdu_in  : PDU with a c32vector (the modulated frame, length L samples)
+    pdu_out : PDU with a c32vector of exactly TARGET samples = frame + (TARGET - L) zeros
+
+TARGET = (preamble_len + train_len + sync 4 + header 6 + max_payload_len + crc 4 + postamble_len) * samples_per_byte
+         i.e. the length of the LARGEST frame the framer can produce.
+Set the sink's buffer_size to this same number (the block prints it at start-up).
+
+Frames longer than TARGET cannot be sent as one buffer; they are dropped with an error message.
+"""
+import numpy as np
+import pmt
 from gnuradio import gr
 
-HDR_FMT  = ">BBBBBBHHQ"
-HDR_SIZE = struct.calcsize(HDR_FMT)  # 18
-
-PKT_STR   = {0x01:"SYN", 0x02:"SYN_ACK", 0x03:"DATA",
-             0x04:"ACK", 0x05:"FIN", 0x06:"FIN_ACK"}
-MEDIA_STR = {0x01:"text", 0x02:"image", 0x03:"audio"}
+SYNC_BYTES = 4
+HDR_BYTES = 6   # len(2) + dest_id + msg_id + rep + n_reps
+CRC_BYTES = 4
 
 
-class blk(gr.sync_block):
-    """Block 1: RX Header Parser -- stateless 18-byte binary header deserializer."""
+def burst_samples(max_payload_len, preamble_len, train_len, samples_per_byte, postamble_len=0):
+    """Length in samples of the largest frame the framer can emit."""
+    nbytes = (int(preamble_len) + int(train_len) + SYNC_BYTES + HDR_BYTES
+              + int(max_payload_len) + CRC_BYTES + int(postamble_len))
+    return nbytes * int(samples_per_byte)
 
-    def __init__(self):
-        gr.sync_block.__init__(self, name='RX Header Parser',
-                               in_sig=None, out_sig=None)
-        self.message_port_register_in(pmt.intern("pdus"))
-        self.message_port_register_out(pmt.intern("pdus"))
-        self.set_msg_handler(pmt.intern("pdus"), self.handle)
 
-    def handle(self, msg):
-        if not pmt.is_pair(msg): return
-        in_meta = pmt.car(msg)
-        in_data = pmt.cdr(msg)
-        if not pmt.is_u8vector(in_data): return
-        raw = bytes(pmt.u8vector_elements(in_data))
-        if len(raw) < HDR_SIZE: return
-        fields   = struct.unpack_from(HDR_FMT, raw)
-        pkt_type = fields[0]
-        if not (0x01 <= pkt_type <= 0x06): return
-        meta = in_meta if pmt.is_dict(in_meta) else pmt.make_dict()
-        for k, v in [
-            ("pkt_type",     pmt.intern(PKT_STR.get(pkt_type, "UNKNOWN"))),
-            ("pkt_type_raw", pmt.from_uint64(pkt_type)),
-            ("media_type",   pmt.intern(MEDIA_STR.get(fields[1], "unknown"))),
-            ("src_addr",     pmt.from_uint64(fields[2])),
-            ("src_port",     pmt.from_uint64(fields[3])),
-            ("dst_addr",     pmt.from_uint64(fields[4])),
-            ("dst_port",     pmt.from_uint64(fields[5])),
-            ("seq_no",       pmt.from_uint64(fields[6])),
-            ("total_pkts",   pmt.from_uint64(fields[7])),
-            ("session_id",   pmt.from_uint64(fields[8])),
-        ]:
-            meta = pmt.dict_add(meta, pmt.intern(k), v)
-        payload  = raw[HDR_SIZE:]
-        out_data = pmt.init_u8vector(len(payload), list(payload))
-        self.message_port_pub(pmt.intern("pdus"), pmt.cons(meta, out_data))
+def pad_to(samples, target):
+    """Return `samples` followed by zeros, exactly `target` long (complex64)."""
+    out = np.zeros(int(target), dtype=np.complex64)
+    out[:len(samples)] = samples
+    return out
 
-    def work(self, input_items, output_items):
-        return 0
+
+class BurstPad(gr.basic_block):
+    def __init__(self, max_payload_len=1024, preamble_len=16, train_len=4,
+                 samples_per_byte=32, postamble_len=0, verbose=1):
+        gr.basic_block.__init__(
+            self,
+            name="Burst Pad (zero fill)",
+            in_sig=None,
+            out_sig=None,
+        )
+        self.max_payload_len = int(max_payload_len)
+        self.preamble_len = int(preamble_len)
+        self.train_len = int(train_len)
+        self.samples_per_byte = int(samples_per_byte)
+        self.postamble_len = int(postamble_len)
+        self.verbose = int(verbose)
+
+        self.target = burst_samples(self.max_payload_len, self.preamble_len,
+                                    self.train_len, self.samples_per_byte, self.postamble_len)
+        self.n_sent = 0
+        self.n_dropped = 0
+
+        self.message_port_register_in(pmt.intern("pdu_in"))
+        self.set_msg_handler(pmt.intern("pdu_in"), self.handle_pdu)
+        self.message_port_register_out(pmt.intern("pdu_out"))
+
+        print(f"[PAD] every burst = {self.target} samples "
+              f"({self.target // max(self.samples_per_byte, 1)} bytes). "
+              f"Set the sink buffer_size to {self.target}.", flush=True)
+
+    def handle_pdu(self, msg):
+        if not pmt.is_pair(msg):
+            self.n_dropped += 1
+            print("[PAD] dropped: message is not a PDU (pair)", flush=True)
+            return
+
+        data = pmt.cdr(msg)
+        if not pmt.is_c32vector(data):
+            self.n_dropped += 1
+            print("[PAD] dropped: PDU payload is not a complex (c32) vector", flush=True)
+            return
+
+        samples = np.array(pmt.c32vector_elements(data), dtype=np.complex64)
+        n = len(samples)
+        if n == 0:
+            return
+
+        if n > self.target:
+            self.n_dropped += 1
+            print(f"[PAD] dropped: frame is {n} samples but the fixed burst is only "
+                  f"{self.target}. Increase max_payload_len / check preamble_len, train_len, "
+                  f"samples_per_byte.", flush=True)
+            return
+
+        out = pad_to(samples, self.target)
+        vec = pmt.init_c32vector(self.target, out.tolist())
+        self.message_port_pub(pmt.intern("pdu_out"), pmt.cons(pmt.PMT_NIL, vec))
+        self.n_sent += 1
+
+        if self.verbose:
+            print(f"[PAD] burst {self.n_sent}: {n} samples ({n / self.samples_per_byte:.1f} B) "
+                  f"+ {self.target - n} zeros = {self.target}", flush=True)

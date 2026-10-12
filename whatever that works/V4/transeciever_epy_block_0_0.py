@@ -1,11 +1,17 @@
 """
-Embedded Python Block: Burst Packet Framer TX
+Embedded Python Block: Burst Packet Framer TX (with training word)
 - Outputs packed byte PDUs directly to pdu_pdu_to_tagged_stream
 - Zero idle transmission (idle between bursts = complete silence)
-- Postamble: postamble_len zero bytes after the CRC, so the last real bytes are
-  pushed out of the Pluto sink buffer / RX filters (deframer ignores them)
-- Frame layout: [preamble] [1A CF FC 1D] [len: 2B][dest_id: 1B][msg_id: 1B][rep: 1B][n_reps: 1B] [payload] [CRC32: 4B]
-- CRC32 covers header + payload
+- No idle bytes after the frame except the short postamble below
+- Frame layout:
+  [preamble] [TRAIN: 4B PN] [1A CF FC 1D] [len: 2B][dest_id: 1B][msg_id: 1B][rep: 1B][n_reps: 1B] [payload] [CRC32: 4B] [postamble]
+- CRC32 covers header + payload (preamble / training word / sync are not covered)
+- TRAIN is a 31-bit m-sequence + 1 pad bit (0xF8 0xDD 0x42 0x58). It is used by the receiver's
+  equalizer (correlator tag + training_sequence); the deframer ignores it, it only searches the sync word.
+- Set train_enable = 0 to send the old frame layout (no training word).
+- POSTAMBLE (postamble_len bytes of 0xAA, default 4): the TX pulse-shaping filter (pfb_arb_resampler) holds
+  back its last ~(11*sps^2 - sps)/2 = 86 samples (~21 symbols, ~2.7 bytes at sps=4) until more input arrives.
+  Without a postamble the last bits of the CRC would not leave the filter. The deframer ignores trailing bytes.
 """
 import zlib
 import pmt
@@ -13,10 +19,14 @@ from gnuradio import gr
 
 SYNC_WORD = bytes([0x1A, 0xCF, 0xFC, 0x1D])
 
+# 31-bit m-sequence (x^5 + x^3 + 1) + 1 pad bit -> 32 bits.
+# Autocorrelation of the 31 bits: 31 at lag 0, -1 elsewhere.
+TRAIN_WORD = bytes([0xF8, 0xDD, 0x42, 0x58])
+
 
 class PacketFramerTX(gr.basic_block):
-    def __init__(self, peer_id=1, preamble_len=64, repeat_count=5, max_payload_len=1024, preamble_byte=0xFF,
-                 postamble_len=160):
+    def __init__(self, peer_id=1, preamble_len=4, repeat_count=1, max_payload_len=1024,
+                 preamble_byte=0xFF, train_enable=1, postamble_len=4):
         gr.basic_block.__init__(
             self,
             name="Packet Framer TX (Burst)",
@@ -28,6 +38,7 @@ class PacketFramerTX(gr.basic_block):
         self.repeat_count = int(repeat_count)
         self.max_payload_len = int(max_payload_len)
         self.preamble_byte = int(preamble_byte) & 0xFF
+        self.train_enable = int(train_enable)
         self.postamble_len = max(0, int(postamble_len))
         self._msg_id = 0
 
@@ -68,12 +79,14 @@ class PacketFramerTX(gr.basic_block):
         n_reps = max(1, min(255, self.repeat_count))
 
         preamble = bytes([self.preamble_byte]) * self.preamble_len
-        print(f"[TX] msg #{msg_id} (to peer {self.peer_id}): {len(payload)} B payload ({n_reps} bursts queued)", flush=True)
+        train = TRAIN_WORD if self.train_enable else b""
+        postamble = bytes([0xAA]) * self.postamble_len
+        print(f"[TX] msg #{msg_id} (to peer {self.peer_id}): '{payload.decode('utf-8', 'replace')}' ({n_reps} bursts queued)", flush=True)
 
         for rep in range(n_reps):
             header = len(payload).to_bytes(2, "big") + bytes([self.peer_id, msg_id, rep, n_reps])
             crc = zlib.crc32(header + payload).to_bytes(4, "big")
-            frame = preamble + SYNC_WORD + header + payload + crc + bytes(self.postamble_len)
+            frame = preamble + train + SYNC_WORD + header + payload + crc + postamble
 
             vec = pmt.init_u8vector(len(frame), list(frame))
             self.message_port_pub(pmt.intern("pdu_out"), pmt.cons(pmt.PMT_NIL, vec))

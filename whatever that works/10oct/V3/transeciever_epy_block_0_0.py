@@ -1,8 +1,10 @@
 """
-Embedded Python Block: Burst Packet Framer TX
+Embedded Python Block: Burst Packet Framer TX (with equalizer training word)
 - Outputs packed byte PDUs directly to pdu_pdu_to_tagged_stream
 - Zero idle transmission between bursts
-- Frame layout: [preamble] [1A CF FC 1D] [len: 2B][dest_id: 1B][msg_id: 1B][rep: 1B][n_reps: 1B] [payload] [CRC32: 4B] [postamble]
+- Frame layout: [preamble] [train word: F8 DD 42 58] [1A CF FC 1D] [len: 2B][dest_id: 1B][msg_id: 1B][rep: 1B][n_reps: 1B] [payload] [CRC32: 4B] [postamble]
+- The train word is known to the RX: the correlator (digital_corr_est_cc) finds it, tags it,
+  and the linear equalizer trains on it. The deframer does not look at it (it only looks for the sync word).
 - Postamble dynamically padded so total size is a multiple of buffer_size
 - Attaches tx_sob (Start of Burst) and tx_eob (End of Burst) metadata tags
 """
@@ -11,6 +13,8 @@ import pmt
 from gnuradio import gr
 
 SYNC_WORD = bytes([0x1A, 0xCF, 0xFC, 0x1D])
+# 31-bit m-sequence + 1 pad bit. MUST match TRAIN_BITS in the flowgraph (RX side).
+TRAIN_WORD = bytes([0xF8, 0xDD, 0x42, 0x58])
 
 
 class PacketFramerTX(gr.basic_block):
@@ -23,6 +27,7 @@ class PacketFramerTX(gr.basic_block):
         preamble_byte=0xFF,
         buffer_size=512,
         postamble_byte=0x00,
+        train_enable=1,
     ):
         gr.basic_block.__init__(
             self,
@@ -37,6 +42,7 @@ class PacketFramerTX(gr.basic_block):
         self.preamble_byte = int(preamble_byte) & 0xFF
         self.buffer_size = int(buffer_size)
         self.postamble_byte = int(postamble_byte) & 0xFF
+        self.train_enable = int(train_enable)
         self._msg_id = 0
 
         self.message_port_register_in(pmt.intern("msg_in"))
@@ -76,6 +82,7 @@ class PacketFramerTX(gr.basic_block):
         n_reps = max(1, min(255, self.repeat_count))
 
         preamble = bytes([self.preamble_byte]) * self.preamble_len
+        train = TRAIN_WORD if self.train_enable else b""
         print(
             f"[TX] msg #{msg_id} (to peer {self.peer_id}): '{payload.decode('utf-8', 'replace')}' ({n_reps} bursts queued)",
             flush=True,
@@ -86,7 +93,7 @@ class PacketFramerTX(gr.basic_block):
             crc = zlib.crc32(header + payload).to_bytes(4, "big")
 
             # Core frame structure before buffer alignment
-            raw_frame = preamble + SYNC_WORD + header + payload + crc
+            raw_frame = preamble + train + SYNC_WORD + header + payload + crc
 
             # Calculate postamble padding required to match buffer_size multiple
             if self.buffer_size > 0:

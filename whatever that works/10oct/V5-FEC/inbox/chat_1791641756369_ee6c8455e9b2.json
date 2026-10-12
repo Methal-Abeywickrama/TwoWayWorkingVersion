@@ -1,0 +1,1 @@
+{"kind": "cdp-chat", "v": 1, "id": "ee6c8455e9b2", "ts": 1791641756.3694925, "author": "node 2", "node": 2, "channel": "general", "text": "export MY_ID=1 TL_LOCAL_ADDR=2 TL_PEER_ADDR=1 TL_RTO_MS=1500\n    gnuradio-companion integrationTest.grc &\n    python3 cdp_chat.py --daemon", "attachment": null, "dst": {"addr": 1, "port": 0}}
