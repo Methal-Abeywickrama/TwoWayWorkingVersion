@@ -1,0 +1,3245 @@
+options:
+  parameters:
+    author: mushab404
+    catch_exceptions: 'True'
+    category: '[GRC Hier Blocks]'
+    cmake_opt: ''
+    comment: ''
+    copyright: ''
+    description: ''
+    gen_cmake: 'On'
+    gen_linking: dynamic
+    generate_options: qt_gui
+    hier_block_src_path: '.:'
+    id: transeciever
+    max_nouts: '0'
+    output_language: python
+    placement: (0,0)
+    qt_qss_theme: ''
+    realtime_scheduling: ''
+    run: 'True'
+    run_command: '{python} -u {filename}'
+    run_options: prompt
+    sizing_mode: fixed
+    thread_safe_setters: ''
+    title: 'CDP transeciever '
+    window_size: (1000,1000)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [8, 8]
+    rotation: 0
+    state: enabled
+
+blocks:
+- name: ADDR
+  id: variable
+  parameters:
+    comment: ''
+    value: '"ip:192.168.1.10"'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [536, 92.0]
+    rotation: 0
+    state: enabled
+- name: BPSK_CONST
+  id: variable_constellation_rect
+  parameters:
+    comment: ''
+    const_points: '[1+0j, -1+0j]'
+    imag_sect: '1'
+    precision: '8'
+    real_sect: '2'
+    rot_sym: '2'
+    soft_dec_lut: None
+    sym_map: '[0, 1]'
+    w_imag_sect: '1'
+    w_real_sect: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [8, 452.0]
+    rotation: 0
+    state: enabled
+- name: BUFFER_SIZE
+  id: variable
+  parameters:
+    comment: ''
+    value: '2048'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [16, 384.0]
+    rotation: 0
+    state: enabled
+- name: BUFFER_SIZE_RX
+  id: variable
+  parameters:
+    comment: ''
+    value: '8192'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [16, 320.0]
+    rotation: 0
+    state: enabled
+- name: CH_GAIN
+  id: variable_qtgui_range
+  parameters:
+    comment: 'Pluto TX attenuation, live. 89.75 = TX practically off (test: does own
+      TX leakage hurt RX?)'
+    gui_hint: ''
+    label: TX attenuation (dB)
+    min_len: '200'
+    orient: QtCore.Qt.Horizontal
+    rangeType: float
+    start: '0'
+    step: '0.25'
+    stop: '89.75'
+    value: '20.0'
+    widget: counter_slider
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [424, 88.0]
+    rotation: 0
+    state: enabled
+- name: DEST_ID
+  id: variable
+  parameters:
+    comment: 'Default destination: 255 = every node, 0..254 = one node. Env CDP_DEST.'
+    value: int(os.environ.get('CDP_DEST', '255'))
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [376, 376.0]
+    rotation: 0
+    state: enabled
+- name: FEC
+  id: variable
+  parameters:
+    comment: '0 = no FEC
+
+      15 = Hamming(15,11)
+
+      31 = Hamming(31,26)'
+    value: '31'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1096, 176.0]
+    rotation: 0
+    state: enabled
+- name: FILTER_BW
+  id: variable
+  parameters:
+    comment: ''
+    value: int(1e6)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1616, 176.0]
+    rotation: 0
+    state: enabled
+- name: FREQ
+  id: variable
+  parameters:
+    comment: Single frequency (half duplex, CSMA). Both nodes TX and RX here.
+    value: TX_FREQ_A
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1184, 256.0]
+    rotation: 0
+    state: enabled
+- name: MY_ID
+  id: variable
+  parameters:
+    comment: This node's ID, 0..254, different on every node. Env CDP_MY_ID (default
+      1).
+    value: int(os.environ.get('CDP_MY_ID', '0'))
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [464, 336.0]
+    rotation: 0
+    state: enabled
+- name: QPSK_CONST
+  id: variable_constellation_rect
+  parameters:
+    comment: ''
+    const_points: '[-1-1j, -1+1j, 1+1j, 1-1j]'
+    imag_sect: '2'
+    precision: '8'
+    real_sect: '2'
+    rot_sym: '4'
+    soft_dec_lut: None
+    sym_map: '[0, 1, 3, 2]'
+    w_imag_sect: '1'
+    w_real_sect: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [8, 148.0]
+    rotation: 0
+    state: enabled
+- name: RC_PULSE
+  id: variable
+  parameters:
+    comment: ''
+    value: np.sinc(RC_X)*np.cos(np.pi*alpha*RC_X)/(1-(2*alpha*RC_X)**2)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [704, 256.0]
+    rotation: 0
+    state: enabled
+- name: RC_X
+  id: variable
+  parameters:
+    comment: ''
+    value: np.arange(-8, 9)/2.0
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [544, 256.0]
+    rotation: 0
+    state: enabled
+- name: RX_AMP
+  id: variable
+  parameters:
+    comment: ''
+    value: '1.0'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [864, 256.0]
+    rotation: 0
+    state: enabled
+- name: RX_FREQ
+  id: variable
+  parameters:
+    comment: ''
+    value: FREQ
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1520, 176.0]
+    rotation: 0
+    state: enabled
+- name: SDR_CF
+  id: variable
+  parameters:
+    comment: ''
+    value: 433e6
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [320, 92.0]
+    rotation: 0
+    state: enabled
+- name: TRAIN_BITS
+  id: variable
+  parameters:
+    comment: ''
+    value: np.unpackbits(np.frombuffer(bytes([0xF8, 0xDD, 0x42, 0x58]), np.uint8))
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [208, 256.0]
+    rotation: 0
+    state: enabled
+- name: TRAIN_REF
+  id: variable
+  parameters:
+    comment: ''
+    value: list(map(complex, RX_AMP*np.convolve(np.kron(TRAIN_SYMS, [1, 0]), RC_PULSE)[8:8+2*len(TRAIN_SYMS)-1]))
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [208, 336.0]
+    rotation: 0
+    state: enabled
+- name: TRAIN_SYMS
+  id: variable
+  parameters:
+    comment: ''
+    value: list(map(complex, 1 - 2*np.bitwise_xor.accumulate(TRAIN_BITS).astype(int)))
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [376, 256.0]
+    rotation: 0
+    state: enabled
+- name: TX_FREQ
+  id: variable
+  parameters:
+    comment: ''
+    value: FREQ
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1416, 176.0]
+    rotation: 0
+    state: enabled
+- name: TX_FREQ_A
+  id: variable
+  parameters:
+    comment: ''
+    value: int(1250e6)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1184, 176.0]
+    rotation: 0
+    state: enabled
+- name: TX_FREQ_B
+  id: variable
+  parameters:
+    comment: ''
+    value: int(1270e6)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1304, 176.0]
+    rotation: 0
+    state: enabled
+- name: adpt_alg
+  id: variable_adaptive_algorithm
+  parameters:
+    comment: ''
+    cons: BPSK_CONST
+    delta: '10.0'
+    ffactor: '0.99'
+    modulus: '2'
+    step_size: '0.5'
+    type: nlms
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [8, 660.0]
+    rotation: 0
+    state: enabled
+- name: alpha
+  id: variable
+  parameters:
+    comment: ''
+    value: '0.35'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [384, 12.0]
+    rotation: 0
+    state: enabled
+- name: corr_thr
+  id: variable_qtgui_range
+  parameters:
+    comment: Normalized correlation threshold (0..1). Random data ~0.1-0.25, real
+      train word ~0.8-1.0.
+    gui_hint: ''
+    label: ''
+    min_len: '200'
+    orient: QtCore.Qt.Horizontal
+    rangeType: float
+    start: '0.3'
+    step: '0.01'
+    stop: '0.98'
+    value: '0.7'
+    widget: counter_slider
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1176, 16.0]
+    rotation: 0
+    state: enabled
+- name: costas_bw
+  id: variable
+  parameters:
+    comment: ''
+    value: '0.06'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [208, 92.0]
+    rotation: 0
+    state: enabled
+- name: cs_margin
+  id: variable_qtgui_range
+  parameters:
+    comment: ''
+    gui_hint: ''
+    label: CSMA sense margin (dB)
+    min_len: '200'
+    orient: QtCore.Qt.Horizontal
+    rangeType: float
+    start: '3'
+    step: '0.5'
+    stop: '15'
+    value: '6'
+    widget: counter_slider
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [822, 16.0]
+    rotation: 0
+    state: enabled
+- name: fll_loop_bw
+  id: variable
+  parameters:
+    comment: ''
+    value: '0.01'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [480, 16.0]
+    rotation: 0
+    state: enabled
+- name: margin_db
+  id: variable_qtgui_range
+  parameters:
+    comment: ''
+    gui_hint: ''
+    label: Squelch margin over noise (dB)
+    min_len: '200'
+    orient: QtCore.Qt.Horizontal
+    rangeType: float
+    start: '2'
+    step: '0.5'
+    stop: '20'
+    value: '6'
+    widget: counter_slider
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [672, 16.0]
+    rotation: 0
+    state: enabled
+- name: max_payload_len
+  id: variable
+  parameters:
+    comment: ''
+    value: '2048'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [304, 176.0]
+    rotation: 0
+    state: enabled
+- name: power_threshold
+  id: variable_function_probe
+  parameters:
+    block_id: epy_noise
+    comment: Automatic squelch threshold (dB) from the noise-floor tracker
+    function_args: ''
+    function_name: level
+    poll_rate: '5'
+    value: '-40'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [672, 100.0]
+    rotation: 0
+    state: enabled
+- name: samp_rate
+  id: variable
+  parameters:
+    comment: ''
+    value: 1.5e6
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [208, 12.0]
+    rotation: 0
+    state: enabled
+- name: sps
+  id: variable
+  parameters:
+    comment: ''
+    value: '4'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [312, 12.0]
+    rotation: 0
+    state: enabled
+- name: sym_bw
+  id: variable
+  parameters:
+    comment: ''
+    value: '0.020'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [208, 172.0]
+    rotation: 0
+    state: enabled
+- name: train_delay
+  id: variable_qtgui_range
+  parameters:
+    comment: ''
+    gui_hint: ''
+    label: ''
+    min_len: '200'
+    orient: QtCore.Qt.Horizontal
+    rangeType: int
+    start: '0'
+    step: '1'
+    stop: '12'
+    value: '0'
+    widget: counter_slider
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1064, 16.0]
+    rotation: 0
+    state: enabled
+- name: analog_agc_xx_0
+  id: analog_agc_xx
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    gain: '1.0'
+    max_gain: '1000'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    rate: 5e-3
+    reference: '1.0'
+    type: complex
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [656, 684.0]
+    rotation: 0
+    state: enabled
+- name: analog_pwr_squelch_xx_0
+  id: analog_pwr_squelch_xx
+  parameters:
+    affinity: ''
+    alias: ''
+    alpha: 1e-3
+    comment: ''
+    gate: 'True'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    ramp: '0'
+    threshold: power_threshold
+    type: complex
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [808, 660.0]
+    rotation: 0
+    state: disabled
+- name: analog_pwr_squelch_xx_0_0
+  id: analog_pwr_squelch_xx
+  parameters:
+    affinity: ''
+    alias: ''
+    alpha: 1e-3
+    comment: ''
+    gate: 'True'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    ramp: '0'
+    threshold: power_threshold
+    type: complex
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [448, 684.0]
+    rotation: 0
+    state: enabled
+- name: blocks_complex_to_mag_squared_0
+  id: blocks_complex_to_mag_squared
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [520, 1088.0]
+    rotation: 0
+    state: disabled
+- name: blocks_copy_0_0
+  id: blocks_copy
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    enabled: 'True'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    showports: 'False'
+    type: byte
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [592, 492.0]
+    rotation: 0
+    state: enabled
+- name: blocks_copy_1
+  id: blocks_copy
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    enabled: 'True'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    showports: 'False'
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [992, 984.0]
+    rotation: 0
+    state: disabled
+- name: blocks_copy_1_0
+  id: blocks_copy
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    enabled: 'True'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    showports: 'False'
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [720, 896.0]
+    rotation: 0
+    state: disabled
+- name: blocks_copy_1_0_0
+  id: blocks_copy
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    enabled: 'True'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    showports: 'False'
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [824, 820.0]
+    rotation: 0
+    state: enabled
+- name: blocks_copy_1_1
+  id: blocks_copy
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    enabled: 'True'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    showports: 'False'
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [512, 896.0]
+    rotation: 0
+    state: disabled
+- name: blocks_copy_1_2
+  id: blocks_copy
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    enabled: 'True'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    showports: 'False'
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1256, 936.0]
+    rotation: 0
+    state: enabled
+- name: blocks_copy_2
+  id: blocks_copy
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    enabled: 'True'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    showports: 'False'
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [2256, 888.0]
+    rotation: 0
+    state: disabled
+- name: blocks_nlog10_ff_0
+  id: blocks_nlog10_ff
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    k: '0'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    n: '10'
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [976, 1076.0]
+    rotation: 0
+    state: disabled
+- name: blocks_skiphead_0
+  id: blocks_skiphead
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: "used to skip head until \nthe filter settles."
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    num_items: int(samp_rate)
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1256, 824.0]
+    rotation: 0
+    state: disabled
+- name: blocks_tag_debug_0
+  id: blocks_tag_debug
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    display: 'True'
+    filter: '""'
+    name: ''
+    num_inputs: '1'
+    type: byte
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1208, 1664.0]
+    rotation: 0
+    state: disabled
+- name: blocks_tag_debug_corr
+  id: blocks_tag_debug
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    display: 'True'
+    filter: '"corr_est"'
+    name: corr_est
+    num_inputs: '1'
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [2256, 552.0]
+    rotation: 0
+    state: disabled
+- name: blocks_tag_gate_0_0
+  id: blocks_tag_gate
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    propagate_tags: 'False'
+    single_key: '""'
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1152, 360.0]
+    rotation: 0
+    state: enabled
+- name: blocks_tagged_stream_multiply_length_0
+  id: blocks_tagged_stream_multiply_length
+  parameters:
+    affinity: ''
+    alias: ''
+    c: '32'
+    comment: ''
+    lengthtagname: '''packet_len'''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1136, 560.0]
+    rotation: 0
+    state: disabled
+- name: blocks_unpack_k_bits_bb_0
+  id: blocks_unpack_k_bits_bb
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    k: '2'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1424, 1360.0]
+    rotation: 0
+    state: disabled
+- name: blocks_unpack_k_bits_bb_0_0
+  id: blocks_unpack_k_bits_bb
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    k: '1'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1416, 1440.0]
+    rotation: 0
+    state: enabled
+- name: dc_blocker_xx_0
+  id: dc_blocker_xx
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: 'Bypassed. Enable (E) if [RX dbg] shows train words with broken sync
+      words and raising this PC''s TX attenuation fixes it: own LO leakage at 0 Hz.'
+    length: '128'
+    long_form: 'True'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    type: cc
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [184, 640]
+    rotation: 0
+    state: enabled
+- name: digital_constellation_decoder_cb_0
+  id: digital_constellation_decoder_cb
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    constellation: QPSK_CONST
+    maxoutbuf: '0'
+    minoutbuf: '0'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [704, 1360.0]
+    rotation: 0
+    state: disabled
+- name: digital_constellation_decoder_cb_0_0
+  id: digital_constellation_decoder_cb
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    constellation: BPSK_CONST
+    maxoutbuf: '0'
+    minoutbuf: '0'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [712, 1440.0]
+    rotation: 0
+    state: enabled
+- name: digital_constellation_modulator_0_0_0
+  id: digital_constellation_modulator
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    constellation: BPSK_CONST
+    differential: 'True'
+    excess_bw: alpha
+    log: 'False'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    samples_per_symbol: sps
+    truncate: 'False'
+    verbose: 'False'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [808, 508.0]
+    rotation: 0
+    state: enabled
+- name: digital_constellation_modulator_0_1
+  id: digital_constellation_modulator
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    constellation: QPSK_CONST
+    differential: 'True'
+    excess_bw: alpha
+    log: 'False'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    samples_per_symbol: sps
+    truncate: 'False'
+    verbose: 'False'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [792, 348.0]
+    rotation: 0
+    state: disabled
+- name: digital_costas_loop_cc_0
+  id: digital_costas_loop_cc
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    order: BPSK_CONST.arity()
+    use_snr: 'False'
+    w: costas_bw
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [2552, 736.0]
+    rotation: 0
+    state: enabled
+- name: digital_diff_decoder_bb_0
+  id: digital_diff_decoder_bb
+  parameters:
+    affinity: ''
+    alias: ''
+    coding: digital.DIFF_DIFFERENTIAL
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    modulus: '4'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [984, 1352.0]
+    rotation: 0
+    state: disabled
+- name: digital_diff_decoder_bb_0_0
+  id: digital_diff_decoder_bb
+  parameters:
+    affinity: ''
+    alias: ''
+    coding: digital.DIFF_DIFFERENTIAL
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    modulus: '2'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [976, 1432.0]
+    rotation: 0
+    state: enabled
+- name: digital_fll_band_edge_cc_0
+  id: digital_fll_band_edge_cc
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    filter_size: 11* sps +1
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    rolloff: alpha
+    samps_per_sym: sps
+    type: cc
+    w: fll_loop_bw
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1024, 708.0]
+    rotation: 0
+    state: enabled
+- name: digital_linear_equalizer_0
+  id: digital_linear_equalizer
+  parameters:
+    adapt_after_training: 'False'
+    affinity: ''
+    alg: adpt_alg
+    alias: ''
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    num_taps: '7'
+    sps: '2'
+    training_sequence: TRAIN_SYMS
+    training_start_tag: '"corr_est"'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [2240, 768.0]
+    rotation: 0
+    state: enabled
+- name: digital_map_bb_0
+  id: digital_map_bb
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    map: '[0,1,3,2]'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1248, 1360.0]
+    rotation: 0
+    state: disabled
+- name: digital_symbol_sync_xx_0
+  id: digital_symbol_sync_xx
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    constellation: digital.constellation_bpsk().base()
+    damping: '1.0'
+    loop_bw: sym_bw
+    max_dev: '0.05'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    nfilters: '128'
+    osps: '2'
+    pfb_mf_taps: '[]'
+    resamp_type: digital.IR_MMSE_8TAP
+    sps: sps
+    ted_gain: '1.0'
+    ted_type: digital.TED_SIGNAL_TIMES_SLOPE_ML
+    type: cc
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1744, 780.0]
+    rotation: 0
+    state: enabled
+- name: epy_block_0
+  id: epy_block
+  parameters:
+    _source_code: "\"\"\"\nEmbedded Python Block: Test Traffic TX  (packet generator\
+      \ + TX log)\n\nConnect:  msg_out  ->  Packet Framer TX  msg_in      (the QT\
+      \ message edit box can stay connected too)\n\nSends test packets following a\
+      \ test plan and writes one CSV row per packet (wall-clock timestamp\nand the\
+      \ exact payload) to  <log_dir>/tx_<date>_<time>_run<id>.csv\n\ntest_plan (string):\
+      \  \"SIZExCOUNT@INTERVAL; SIZExCOUNT@INTERVAL; ...\"\n    \"20x50@0.5; 200x50@0.5;\
+      \ 1000x50@1; 2000x30@1.5\"\n    SIZE      payload bytes, including the 8-byte\
+      \ test header (min 8, max max_payload_len)\n    COUNT     packets in this set\n\
+      \    INTERVAL  seconds between packet starts; \"ms\" suffix allowed: 100x50@250ms\n\
+      \    optional set names:  \"short:20x50@0.5; long:2000x30@1.5\"\n  A Python\
+      \ list also works:  [(20, 50, 0.5), (200, 50, 0.5, \"medium\")]\n\nPayload =\
+      \ [A5 5A][run_id: 2 B][seq: 4 B][fill]\n    payload_mode \"ascii\"  : readable\
+      \ text (default; keeps the framer/deframer console prints clean)\n         \
+      \        \"random\" : reproducible pseudo-random bytes (most representative\
+      \ for the PHY)\n                 \"fixed\"  : fill_byte repeated\nThe RX logger\
+      \ and analyze_link.py match packets by (run_id, seq).\n\nA run starts start_delay\
+      \ seconds after the flowgraph starts (autostart=1), or whenever any message\n\
+      arrives on the ctrl port (e.g. a QT GUI Msg Push Button). A ctrl message containing\
+      \ \"stop\" ends the run.\nEach run gets a new random run_id and its own log\
+      \ file.\nTimestamps are wall-clock (time.time) in microseconds; keep both PCs\
+      \ NTP-synced for one-way latency.\nNote: the timestamp is when the packet is\
+      \ handed to the framer, not when it is on air. If the interval\nis shorter than\
+      \ the airtime, packets queue in the TX chain and the measured latency grows.\n\
+      \"\"\"\nimport csv\nimport datetime\nimport os\nimport re\nimport socket\nimport\
+      \ threading\nimport time\n\nimport numpy as np\nimport pmt\nfrom gnuradio import\
+      \ gr\n\nMAGIC = b\"\\xA5\\x5A\"\nTEST_HDR_LEN = 8                       # magic(2)\
+      \ + run_id(2) + seq(4)\nASCII_TEXT = b\"The quick brown fox jumps over the lazy\
+      \ dog 0123456789. \"\nTX_FIELDS = [\"run_id\", \"seq\", \"loop\", \"set_idx\"\
+      , \"set_name\", \"size\", \"interval_s\",\n             \"tx_time_us\", \"tx_time_iso\"\
+      , \"late_ms\", \"host\", \"payload_mode\", \"payload_hex\"]\n\n\ndef parse_plan(plan):\n\
+      \    \"\"\"Returns [(name, size, count, interval_s), ...] from a plan string\
+      \ or list.\"\"\"\n    entries = []\n    if isinstance(plan, str):\n        items\
+      \ = [s.strip() for s in re.split(r\"[;\\n]\", plan) if s.strip()]\n        for\
+      \ i, item in enumerate(items):\n            name = None\n            if \":\"\
+      \ in item:\n                name, item = item.split(\":\", 1)\n            \
+      \    name = name.strip() or None\n            m = re.fullmatch(r\"\\s*(\\d+)\\\
+      s*[xX*]\\s*(\\d+)\\s*@\\s*([0-9]*\\.?[0-9]+)\\s*(ms|s)?\\s*\", item)\n     \
+      \       if not m:\n                raise ValueError(f\"test_plan entry '{item}':\
+      \ use SIZExCOUNT@INTERVAL, e.g. 100x50@0.5\")\n            size, count, iv =\
+      \ int(m.group(1)), int(m.group(2)), float(m.group(3))\n            if m.group(4)\
+      \ == \"ms\":\n                iv /= 1000.0\n            entries.append((name\
+      \ or f\"set{i}_{size}B\", size, count, iv))\n    else:\n        for i, e in\
+      \ enumerate(plan):\n            if isinstance(e, dict):\n                size,\
+      \ count, iv, name = int(e[\"size\"]), int(e[\"count\"]), float(e[\"interval\"\
+      ]), e.get(\"name\")\n            else:\n                size, count, iv = int(e[0]),\
+      \ int(e[1]), float(e[2])\n                name = str(e[3]) if len(e) > 3 else\
+      \ None\n            entries.append((name or f\"set{i}_{size}B\", size, count,\
+      \ iv))\n    return entries\n\n\nclass TestTrafficTX(gr.basic_block):\n    def\
+      \ __init__(self, test_plan=\"20x50@0.5; 200x50@0.5; 1000x50@1.0\", repeat_plan=1,\n\
+      \                 start_delay=5.0, set_gap=2.0, payload_mode=\"ascii\", fill_byte=0x55,\n\
+      \                 max_payload_len=2048, log_dir=\"~/link_tests\", autostart=1):\n\
+      \        gr.basic_block.__init__(self, name=\"Test Traffic TX\", in_sig=None,\
+      \ out_sig=None)\n        self.test_plan = test_plan\n        self.repeat_plan\
+      \ = max(1, int(repeat_plan))\n        self.start_delay = max(0.0, float(start_delay))\n\
+      \        self.set_gap = max(0.0, float(set_gap))\n        self.payload_mode\
+      \ = str(payload_mode).lower()\n        self.fill_byte = int(fill_byte) & 0xFF\n\
+      \        self.max_payload_len = int(max_payload_len)\n        self.log_dir =\
+      \ str(log_dir)\n        self.autostart = int(autostart)\n        if self.payload_mode\
+      \ not in (\"ascii\", \"random\", \"fixed\"):\n            raise ValueError(\"\
+      payload_mode must be 'ascii', 'random' or 'fixed'\")\n        self._plan = self._checked_plan(test_plan)\
+      \       # a bad plan raises here -> visible in GRC\n        self._host = socket.gethostname()\n\
+      \        self._thread = None\n        self._stop_evt = threading.Event()\n \
+      \       self._lock = threading.Lock()\n\n        self._port_out = pmt.intern(\"\
+      msg_out\")\n        self.message_port_register_out(self._port_out)\n       \
+      \ self.message_port_register_in(pmt.intern(\"ctrl\"))\n        self.set_msg_handler(pmt.intern(\"\
+      ctrl\"), self._handle_ctrl)\n\n    # ----------------------------------------------------------------\
+      \ plan\n    def _checked_plan(self, plan):\n        out = []\n        for name,\
+      \ size, count, iv in parse_plan(plan):\n            s = max(size, TEST_HDR_LEN)\n\
+      \            if self.max_payload_len > 0:\n                s = min(s, self.max_payload_len)\n\
+      \            if s != size:\n                print(f\"[TEST TX] set '{name}':\
+      \ size {size} B -> {s} B \"\n                      f\"(min {TEST_HDR_LEN}, max\
+      \ {self.max_payload_len})\", flush=True)\n            if count <= 0 or iv <\
+      \ 0:\n                raise ValueError(f\"set '{name}': count must be > 0 and\
+      \ interval >= 0\")\n            out.append((name, s, count, iv))\n        if\
+      \ not out:\n            raise ValueError(\"test_plan is empty\")\n        return\
+      \ out\n\n    # ----------------------------------------------------------------\
+      \ run control\n    def start(self):\n        if self.autostart:\n          \
+      \  self._launch(self.start_delay)\n        return True\n\n    def stop(self):\n\
+      \        self._halt()\n        return True\n\n    def _launch(self, delay):\n\
+      \        with self._lock:\n            self._halt_locked()\n            self._stop_evt\
+      \ = threading.Event()\n            self._thread = threading.Thread(target=self._run_safe,\
+      \ args=(delay, self._stop_evt), daemon=True)\n            self._thread.start()\n\
+      \n    def _halt(self):\n        with self._lock:\n            return self._halt_locked()\n\
+      \n    def _halt_locked(self):\n        running = self._thread is not None and\
+      \ self._thread.is_alive()\n        if running:\n            self._stop_evt.set()\n\
+      \            self._thread.join(timeout=3.0)\n        self._thread = None\n \
+      \       return running\n\n    def _handle_ctrl(self, msg):\n        try:\n \
+      \           if pmt.is_pair(msg):\n                txt = f\"{pmt.to_python(pmt.car(msg))}\
+      \ {pmt.to_python(pmt.cdr(msg))}\"\n            else:\n                txt =\
+      \ str(pmt.to_python(msg))\n        except Exception:\n            txt = \"\"\
+      \n        if \"stop\" in txt.lower():\n            if self._halt():\n      \
+      \          print(\"[TEST TX] run stopped by ctrl message\", flush=True)\n  \
+      \      else:\n            print(\"[TEST TX] new run requested by ctrl message\"\
+      , flush=True)\n            self._launch(0.0)\n\n    # ----------------------------------------------------------------\
+      \ payload\n    def _make_payload(self, run_id, seq, size):\n        hdr = MAGIC\
+      \ + run_id.to_bytes(2, \"big\") + (seq & 0xFFFFFFFF).to_bytes(4, \"big\")\n\
+      \        n = size - len(hdr)\n        if n <= 0:\n            return hdr\n \
+      \       if self.payload_mode == \"random\":\n            rng = np.random.default_rng((run_id\
+      \ << 32) | seq)\n            fill = rng.integers(0, 256, n, dtype=np.uint8).tobytes()\n\
+      \        elif self.payload_mode == \"ascii\":\n            base = b\"#%07d \"\
+      \ % seq + ASCII_TEXT\n            fill = (base * (n // len(base) + 1))[:n]\n\
+      \        else:\n            fill = bytes([self.fill_byte]) * n\n        return\
+      \ hdr + fill\n\n    # ----------------------------------------------------------------\
+      \ worker thread\n    def _run_safe(self, delay, stop_evt):\n        try:\n \
+      \           self._run(delay, stop_evt)\n        except Exception as e:     \
+      \                 # never die silently in a thread\n            print(f\"[TEST\
+      \ TX] ERROR: {e!r}\", flush=True)\n\n    def _run(self, delay, stop_evt):\n\
+      \        if stop_evt.wait(delay):\n            return\n        run_id = int.from_bytes(os.urandom(2),\
+      \ \"big\")\n        d = os.path.expanduser(self.log_dir)\n        os.makedirs(d,\
+      \ exist_ok=True)\n        path = os.path.join(d, f\"tx_{datetime.datetime.now():%Y%m%d_%H%M%S}_run{run_id:04x}.csv\"\
+      )\n        total = sum(c for _, _, c, _ in self._plan) * self.repeat_plan\n\
+      \        print(f\"[TEST TX] run {run_id:04x}: {len(self._plan)} sets x {self.repeat_plan}\
+      \ loop(s), \"\n              f\"{total} packets, log -> {path}\", flush=True)\n\
+      \n        seq, max_late, n_late = 0, 0.0, 0\n        with open(path, \"w\",\
+      \ newline=\"\") as f:\n            w = csv.writer(f)\n            w.writerow(TX_FIELDS)\n\
+      \            f.flush()\n            for loop in range(self.repeat_plan):\n \
+      \               for set_idx, (name, size, count, iv) in enumerate(self._plan):\n\
+      \                    print(f\"[TEST TX] run {run_id:04x} loop {loop + 1}/{self.repeat_plan}\
+      \ set {set_idx + 1}/\"\n                          f\"{len(self._plan)} '{name}':\
+      \ {count} x {size} B every {iv:g} s\", flush=True)\n                    t_next\
+      \ = time.monotonic()\n                    for _ in range(count):\n         \
+      \               wait = t_next - time.monotonic()\n                        if\
+      \ wait > 0 and stop_evt.wait(wait):\n                            print(f\"[TEST\
+      \ TX] run {run_id:04x} stopped after {seq} packets\", flush=True)\n        \
+      \                    return\n                        late = max(0.0, -wait)\n\
+      \                        max_late = max(max_late, late)\n                  \
+      \      if iv > 0 and late > 0.1 * iv:\n                            n_late +=\
+      \ 1\n                        payload = self._make_payload(run_id, seq, size)\n\
+      \                        t_us = time.time_ns() // 1000\n                   \
+      \     self.message_port_pub(self._port_out,\n                              \
+      \                pmt.cons(pmt.make_dict(),\n                               \
+      \                        pmt.init_u8vector(len(payload), list(payload))))\n\
+      \                        w.writerow([run_id, seq, loop, set_idx, name, size,\
+      \ iv, t_us,\n                                    datetime.datetime.fromtimestamp(t_us\
+      \ / 1e6).isoformat(timespec=\"milliseconds\"),\n                           \
+      \         f\"{late * 1000:.2f}\", self._host, self.payload_mode, payload.hex()])\n\
+      \                        f.flush()\n                        seq += 1\n     \
+      \                   t_next += iv\n                    if self.set_gap > 0 and\
+      \ stop_evt.wait(self.set_gap):\n                        print(f\"[TEST TX] run\
+      \ {run_id:04x} stopped after {seq} packets\", flush=True)\n                \
+      \        return\n        msg = f\"[TEST TX] run {run_id:04x} DONE: {seq} packets\
+      \ sent, max scheduling lateness {max_late * 1000:.1f} ms\"\n        if n_late:\n\
+      \            msg += f\" ({n_late} packets >10% of their interval late: this\
+      \ PC cannot keep that rate)\"\n        print(msg, flush=True)"
+    affinity: ''
+    alias: ''
+    autostart: '1'
+    comment: ''
+    fill_byte: '"FF"'
+    log_dir: '"~/link_tests"'
+    max_payload_len: max_payload_len
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    payload_mode: '"ascii"'
+    repeat_plan: '1'
+    set_gap: '2'
+    start_delay: '5'
+    test_plan: '"20x50@0.5; 200x50@0.5; 1000x50@1.0"'
+  states:
+    _io_cache: ('Test Traffic TX', 'TestTrafficTX', [('test_plan', "'20x50@0.5; 200x50@0.5;
+      1000x50@1.0'"), ('repeat_plan', '1'), ('start_delay', '5.0'), ('set_gap', '2.0'),
+      ('payload_mode', "'ascii'"), ('fill_byte', '85'), ('max_payload_len', '2048'),
+      ('log_dir', "'~/link_tests'"), ('autostart', '1')], [('ctrl', 'message', 1)],
+      [('msg_out', 'message', 1)], '', ['autostart', 'fill_byte', 'log_dir', 'max_payload_len',
+      'payload_mode', 'repeat_plan', 'set_gap', 'start_delay', 'test_plan'])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1240, 2000.0]
+    rotation: 180
+    state: disabled
+- name: epy_block_0_0
+  id: epy_block
+  parameters:
+    _source_code: "\"\"\"\nEmbedded Python Block: Burst Packet Framer TX (with equalizer\
+      \ training word)\n- Outputs packed byte PDUs directly to pdu_pdu_to_tagged_stream\n\
+      - Zero idle transmission between bursts\n- Frame layout: [preamble] [train word:\
+      \ F8 DD 42 58] [1A CF FC 1D] [len: 2B][dest_id: 1B][msg_id: 1B][rep: 1B][n_reps:\
+      \ 1B] [payload] [CRC32: 4B] [postamble]\n- The train word is known to the RX:\
+      \ the correlator (digital_corr_est_cc) finds it, tags it,\n  and the linear\
+      \ equalizer trains on it. The deframer does not look at it (it only looks for\
+      \ the sync word).\n- Postamble dynamically padded so total size is a multiple\
+      \ of buffer_size\n- Attaches tx_sob (Start of Burst) and tx_eob (End of Burst)\
+      \ metadata tags\n\"\"\"\nimport zlib\nimport pmt\nfrom gnuradio import gr\n\n\
+      SYNC_WORD = bytes([0x1A, 0xCF, 0xFC, 0x1D])\n# 31-bit m-sequence + 1 pad bit.\
+      \ MUST match TRAIN_BITS in the flowgraph (RX side).\nTRAIN_WORD = bytes([0xF8,\
+      \ 0xDD, 0x42, 0x58])\n\n\nclass PacketFramerTX(gr.basic_block):\n    def __init__(\n\
+      \        self,\n        peer_id=1,\n        preamble_len=64,\n        repeat_count=5,\n\
+      \        max_payload_len=1024,\n        preamble_byte=0xFF,\n        buffer_size=512,\n\
+      \        postamble_byte=0x00,\n        train_enable=1,\n    ):\n        gr.basic_block.__init__(\n\
+      \            self,\n            name=\"Packet Framer TX (Burst)\",\n       \
+      \     in_sig=None,\n            out_sig=None,\n        )\n        self.peer_id\
+      \ = int(peer_id) & 0xFF\n        self.preamble_len = int(preamble_len)\n   \
+      \     self.repeat_count = int(repeat_count)\n        self.max_payload_len =\
+      \ int(max_payload_len)\n        self.preamble_byte = int(preamble_byte) & 0xFF\n\
+      \        self.buffer_size = int(buffer_size)\n        self.postamble_byte =\
+      \ int(postamble_byte) & 0xFF\n        self.train_enable = int(train_enable)\n\
+      \        self._msg_id = 0\n\n        self.message_port_register_in(pmt.intern(\"\
+      msg_in\"))\n        self.set_msg_handler(pmt.intern(\"msg_in\"), self.handle_msg)\n\
+      \        self.message_port_register_out(pmt.intern(\"pdu_out\"))\n\n    @staticmethod\n\
+      \    def _extract_payload(msg):\n        if pmt.is_pair(msg):\n            data\
+      \ = pmt.cdr(msg)\n            if pmt.is_u8vector(data):\n                return\
+      \ bytes(pmt.u8vector_elements(data))\n            return str(pmt.to_python(data)).encode(\"\
+      utf-8\")\n        if pmt.is_symbol(msg):\n            return pmt.symbol_to_string(msg).encode(\"\
+      utf-8\")\n        val = pmt.to_python(msg)\n        if isinstance(val, (bytes,\
+      \ bytearray)):\n            return bytes(val)\n        return str(val).encode(\"\
+      utf-8\")\n\n    def handle_msg(self, msg):\n        try:\n            payload\
+      \ = self._extract_payload(msg)\n        except Exception as e:\n           \
+      \ print(f\"[TX] Could not parse message: {e}\", flush=True)\n            return\n\
+      \n        if not payload:\n            return\n\n        if len(payload) > self.max_payload_len:\n\
+      \            print(f\"[TX] Payload {len(payload)} B truncated to {self.max_payload_len}\
+      \ B\", flush=True)\n            payload = payload[: self.max_payload_len]\n\n\
+      \        msg_id = self._msg_id\n        self._msg_id = (self._msg_id + 1) &\
+      \ 0xFF\n        n_reps = max(1, min(255, self.repeat_count))\n\n        preamble\
+      \ = bytes([self.preamble_byte]) * self.preamble_len\n        train = TRAIN_WORD\
+      \ if self.train_enable else b\"\"\n        print(\n            f\"[TX] msg #{msg_id}\
+      \ (to peer {self.peer_id}): '{payload.decode('utf-8', 'replace')}' ({n_reps}\
+      \ bursts queued)\",\n            flush=True,\n        )\n\n        for rep in\
+      \ range(n_reps):\n            header = len(payload).to_bytes(2, \"big\") + bytes([self.peer_id,\
+      \ msg_id, rep, n_reps])\n            crc = zlib.crc32(header + payload).to_bytes(4,\
+      \ \"big\")\n\n            # Core frame structure before buffer alignment\n \
+      \           raw_frame = preamble + train + SYNC_WORD + header + payload + crc\n\
+      \n            # Calculate postamble padding required to match buffer_size multiple\n\
+      \            if self.buffer_size > 0:\n                rem = len(raw_frame)\
+      \ % self.buffer_size\n                pad_len = (self.buffer_size - rem) % self.buffer_size\n\
+      \            else:\n                pad_len = 0\n\n            postamble = bytes([self.postamble_byte])\
+      \ * pad_len\n            frame = raw_frame + postamble\n\n            # Build\
+      \ metadata dictionary with tx_sob and tx_eob tags\n            meta = pmt.make_dict()\n\
+      \            meta = pmt.dict_add(meta, pmt.intern(\"tx_sob\"), pmt.PMT_T)\n\
+      \            meta = pmt.dict_add(meta, pmt.intern(\"tx_eob\"), pmt.PMT_T)\n\n\
+      \            # Explicit offset tags for downstream PDU-to-Tagged-Stream conversion\n\
+      \            sob_tag = pmt.make_tuple(pmt.from_long(0), pmt.intern(\"tx_sob\"\
+      ), pmt.PMT_T)\n            eob_tag = pmt.make_tuple(pmt.from_long(len(frame)\
+      \ - 1), pmt.intern(\"tx_eob\"), pmt.PMT_T)\n            extra_tags = pmt.list2(sob_tag,\
+      \ eob_tag)\n            meta = pmt.dict_add(meta, pmt.intern(\"extra_tags\"\
+      ), extra_tags)\n\n            vec = pmt.init_u8vector(len(frame), list(frame))\n\
+      \            self.message_port_pub(pmt.intern(\"pdu_out\"), pmt.cons(meta, vec))\n"
+    affinity: ''
+    alias: ''
+    buffer_size: BUFFER_SIZE
+    comment: ''
+    max_payload_len: max_payload_len
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    peer_id: '1'
+    postamble_byte: '0xFF'
+    preamble_byte: '0xFF'
+    preamble_len: '128'
+    repeat_count: '1'
+    train_enable: '1'
+  states:
+    _io_cache: ('Packet Framer TX (Burst)', 'PacketFramerTX', [('peer_id', '1'), ('preamble_len',
+      '64'), ('repeat_count', '5'), ('max_payload_len', '1024'), ('preamble_byte',
+      '255'), ('buffer_size', '512'), ('postamble_byte', '0'), ('train_enable', '1')],
+      [('msg_in', 'message', 1)], [('pdu_out', 'message', 1)], '', ['buffer_size',
+      'max_payload_len', 'peer_id', 'postamble_byte', 'preamble_byte', 'preamble_len',
+      'repeat_count', 'train_enable'])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [824, 1732.0]
+    rotation: 180
+    state: disabled
+- name: epy_block_0_0_0
+  id: epy_block
+  parameters:
+    _source_code: "\"\"\"\nEmbedded Python Block: Fast Burst Packet Deframer RX (Hamming\
+      \ FEC) - v6.3, multi-node, with stage diagnostics\n- Vectorized NumPy sliding-window\
+      \ sync detection; positive correlation only (diff decoder resolves 180 deg)\n\
+      - fec = 0 / 15 / 31 and interleave must match the TX framer (v6.3 framer: 7-byte\
+      \ header with dst and src)\n- Hamming decode: header section first (gives the\
+      \ length), then payload+CRC section; CRC32 over header+payload\n- Address filter:\
+      \ delivers frames with dst == my_id or dst == 255 (broadcast). Frames with src\
+      \ == my_id are our\n  own (echo) and are dropped. accept_all = 1 delivers every\
+      \ good frame (monitor node).\n- Repeat filter, per sender: a frame is a repeat\
+      \ only if it has the same msg_id as that sender's last message, a\n  burst number\
+      \ not seen yet, and arrives within dup_window_s. A restarted sender (msg_id\
+      \ back to 0) is shown again.\n- pdu_out metadata: src_id, dst_id, msg_id, n_reps,\
+      \ fec_corrected\n\nDiagnostics (debug = 1), at most max_dbg_lines lines per\
+      \ second:\n  [RX dbg] train word ...  for every 'corr_est' tag (the correlator\
+      \ found the train word), once the bits behind it\n                         \
+      \  have arrived: bit errors in the train word and in the sync word right after\
+      \ it, counted\n                           on the decoded bits (after equalizer,\
+      \ Costas, slicer, diff decoder, i.e. what this block\n                     \
+      \      gets). The deframer locks only if the sync word has <= max_bit_errors\
+      \ errors.\n  [RX dbg] frame ...       for every sync word this block locks on:\
+      \ header length, CRC result, bits fixed by the\n                           FEC,\
+      \ squelch closures inside the frame ('squelch_eob' tags: the power squelch with\n\
+      \                           gate = True dropped samples there), sender ID and\
+      \ what happened to the frame.\n  [RX stats] ...           every stats_every_s\
+      \ while there is traffic: counters for each stage since the\n              \
+      \             previous [RX stats] line, and good frames per sender ID.\n\"\"\
+      \"\nimport time\nimport zlib\nimport numpy as np\nimport pmt\nfrom gnuradio\
+      \ import gr\n\nSYNC_WORD = bytes([0x1A, 0xCF, 0xFC, 0x1D])\nTRAIN_WORD = bytes([0xF8,\
+      \ 0xDD, 0x42, 0x58])     # must match the framer / TRAIN_BITS\nHDR_BYTES = 7\
+      \  # len (2B) + dst (1B) + src (1B) + msg_id (1B) + rep (1B) + n_reps (1B)\n\
+      BROADCAST = 0xFF\nHIST_BITS = 1 << 16\n\n\ndef hamming_tables(n):\n    \"\"\"\
+      Standard positional Hamming layout: parity bits at positions 1, 2, 4, 8, (16).\"\
+      \"\"\n    m = {15: 4, 31: 5}[n]\n    pos = np.arange(1, n + 1)\n    is_parity\
+      \ = (pos & (pos - 1)) == 0\n    data_idx = np.flatnonzero(~is_parity)\n    H\
+      \ = ((pos[None, :] >> np.arange(m)[:, None]) & 1).astype(np.int32)   # m x n,\
+      \ column j = bin(j)\n    weights = (1 << np.arange(m)).astype(np.int32)\n  \
+      \  return data_idx, H, weights\n\n\ndef hamming_decode_bits(coded, n, nblk,\
+      \ interleave):\n    \"\"\"coded: nblk*n bits. Returns (data bits nblk*k, number\
+      \ of corrected bits).\"\"\"\n    data_idx, H, weights = hamming_tables(n)\n\
+      \    c = np.asarray(coded, dtype=np.int32)\n    cw = c.reshape(n, nblk).T.copy()\
+      \ if interleave else c.reshape(nblk, n).copy()\n    S = ((cw @ H.T) & 1) @ weights\
+      \          # syndrome = error position (1..n), 0 = no error\n    bad = np.flatnonzero(S)\n\
+      \    cw[bad, S[bad] - 1] ^= 1                # flip bit at position S\n    return\
+      \ cw[:, data_idx].reshape(-1).astype(np.uint8), int(bad.size)\n\n\ndef _pm(b):\n\
+      \    return np.unpackbits(np.frombuffer(b, np.uint8)).astype(np.int16) * 2 -\
+      \ 1\n\n\nclass PacketDeframerRX(gr.sync_block):\n    def __init__(self, my_id=1,\
+      \ max_bit_errors=2, max_payload_len=1024, bit_rate=375000,\n               \
+      \  fec=15, interleave=True, accept_all=0, debug=1, max_dbg_lines=20, stats_every_s=10.0,\n\
+      \                 dup_window_s=2.0):\n        gr.sync_block.__init__(\n    \
+      \        self,\n            name=\"Packet Deframer RX (Fast Burst, Hamming,\
+      \ multi-node)\",\n            in_sig=[np.uint8],\n            out_sig=None,\n\
+      \        )\n        self.my_id = int(my_id) & 0xFF\n        self.accept_all\
+      \ = int(accept_all)\n        self.max_bit_errors = int(max_bit_errors)\n   \
+      \     self.max_payload_len = int(max_payload_len)\n        self.bit_rate = float(bit_rate)\n\
+      \        self.fec = int(fec)\n        self.interleave = bool(interleave)\n \
+      \       self.debug = int(debug)\n        self.max_dbg_lines = max(1, int(max_dbg_lines))\n\
+      \        self.stats_every_s = float(stats_every_s)\n        self.dup_window_s\
+      \ = float(dup_window_s)\n        if self.fec not in (0, 15, 31):\n         \
+      \   raise ValueError(\"fec must be 0, 15 or 31\")\n\n        self._sync = _pm(SYNC_WORD)\n\
+      \        self._train = _pm(TRAIN_WORD)\n        self._buf = np.zeros(0, dtype=np.uint8)\n\
+      \        self._buf_abs = 0                     # absolute input index of self._buf[0]\n\
+      \n        # decoded-bit history for the train-word check\n        self._hist\
+      \ = np.zeros(0, dtype=np.uint8)\n        self._hist_abs = 0\n        self._train_pending\
+      \ = []              # [(abs offset, rho)]\n        self._train_seen = []   \
+      \              # [(abs index where the sync word should start, rho, terr, serr)]\n\
+      \        self._eobs = []                       # abs offsets of squelch_eob\
+      \ tags (recent)\n\n        self.n_sync = 0\n        self.n_ok = 0\n        self.n_crc_fail\
+      \ = 0\n        self.n_bad_len = 0\n        self.n_fec_corrected = 0\n      \
+      \  self._c = dict.fromkeys((\"train\", \"train_clean\", \"train_bad_sync\",\
+      \ \"train_garbage\", \"lock\", \"bad_len\",\n                              \
+      \   \"crc_fail\", \"crc_fail_cut\", \"ok\", \"other\", \"own\", \"delivered\"\
+      , \"repeat\",\n                                 \"sq_eob\"), 0)\n        self._by_src\
+      \ = {}                     # src id -> good frames since the last stats line\n\
+      \        self._c_last = dict(self._c)\n        self._t_stats = time.monotonic()\n\
+      \        self._dbg_t = 0.0\n        self._dbg_n = 0\n        self._dbg_dropped\
+      \ = 0\n        self._warned_id = False\n        self._own_seen = 0\n\n     \
+      \   self._bits_total = 0\n        self._bits_at_last_ok = 0\n        self._cur_id\
+      \ = None\n        self._cur_reps = set()\n        self._cur_nreps = 0\n    \
+      \    self._cur_corr = 0\n        self._last = {}                       # src\
+      \ -> {\"msg\": msg_id, \"reps\": set, \"t\": time}\n\n        self.message_port_register_out(pmt.intern(\"\
+      pdu_out\"))\n        self.message_port_register_out(pmt.intern(\"text_out\"\
+      ))\n\n    # ---------- start / stop ----------\n    def start(self):\n     \
+      \   what = \"every good frame (accept_all)\" if self.accept_all else f\"frames\
+      \ to ID {self.my_id} or to all\"\n        print(f\"[RX] this node: ID {self.my_id};\
+      \ delivers {what} \"\n              f\"(FEC {self.fec or 'off'}, sync word may\
+      \ have <= {self.max_bit_errors} bit errors)\", flush=True)\n        return True\n\
+      \n    def stop(self):\n        self._flush_summary()\n        if self.debug:\n\
+      \            self._print_stats(final=True)\n        return True\n\n    # ----------\
+      \ debug output ----------\n    def _dbg(self, line):\n        if not self.debug:\n\
+      \            return\n        now = time.monotonic()\n        if now - self._dbg_t\
+      \ >= 1.0:\n            self._dbg_t, self._dbg_n = now, 0\n        if self._dbg_n\
+      \ >= self.max_dbg_lines:\n            self._dbg_dropped += 1\n            return\n\
+      \        self._dbg_n += 1\n        if self._dbg_dropped:\n            print(f\"\
+      [RX dbg] ({self._dbg_dropped} lines not shown: more than {self.max_dbg_lines}/s)\"\
+      , flush=True)\n            self._dbg_dropped = 0\n        print(f\"[RX dbg]\
+      \ {line}\", flush=True)\n\n    def _print_stats(self, final=False):\n      \
+      \  c, l = self._c, self._c_last\n        d = {k: c[k] - l[k] for k in c} if\
+      \ not final else c\n        if not final and not any(d.values()):\n        \
+      \    return\n        span = \"total\" if final else \"since last line\"\n  \
+      \      senders = \", \".join(f\"ID {k}: {v}\" for k, v in sorted(self._by_src.items()))\
+      \ or \"none\"\n        print(f\"[RX stats] {span}: train words {d['train']}\
+      \ (clean {d['train_clean']}, sync word broken \"\n              f\"{d['train_bad_sync']},\
+      \ no train word in the bits {d['train_garbage']}) | sync locks {d['lock']} |\
+      \ \"\n              f\"bad length {d['bad_len']} | CRC fail {d['crc_fail']}\
+      \ (squelch closed inside {d['crc_fail_cut']}) | \"\n              f\"CRC ok\
+      \ {d['ok']}: delivered {d['delivered']}, repeats {d['repeat']}, for other nodes\
+      \ {d['other']}, \"\n              f\"own {d['own']} | good frames by sender:\
+      \ {senders} | squelch closures {d['sq_eob']}\", flush=True)\n        self._c_last\
+      \ = dict(c)\n        if not final:\n            self._by_src = {}\n\n    # ----------\
+      \ section sizes (in channel bits) ----------\n    def _coded_len(self, n_bytes):\n\
+      \        if self.fec == 0:\n            return n_bytes * 8, 0\n        nblk\
+      \ = -(-(n_bytes * 8) // {15: 11, 31: 26}[self.fec])\n        return nblk * self.fec,\
+      \ nblk\n\n    def _decode_section(self, coded, n_bytes, nblk):\n        if self.fec\
+      \ == 0:\n            return np.packbits(coded).tobytes(), 0\n        bits, corr\
+      \ = hamming_decode_bits(coded, self.fec, nblk, self.interleave)\n        return\
+      \ np.packbits(bits[:n_bytes * 8]).tobytes(), corr\n\n    # ---------- statistics\
+      \ / delivery ----------\n    def _flush_summary(self):\n        if self._cur_id\
+      \ is not None:\n            got, n = len(self._cur_reps), self._cur_nreps\n\
+      \            loss = 100.0 * (n - got) / max(n, 1)\n            fec_txt = f\"\
+      , FEC corrected {self._cur_corr} bits\" if self.fec else \"\"\n            print(f\"\
+      [RX] msg #{self._cur_id}: {got}/{n} bursts OK (Loss: {loss:.0f}%){fec_txt}\"\
+      , flush=True)\n        self._cur_id = None\n        self._cur_reps = set()\n\
+      \        self._cur_corr = 0\n\n    def _deliver(self, header, payload, corrected):\n\
+      \        \"\"\"Returns 'delivered' or 'repeat'.\"\"\"\n        dst, sender,\
+      \ msg_id, rep, n_reps = header[2], header[3], header[4], header[5], header[6]\n\
+      \        now = time.monotonic()\n        last = self._last.get(sender)\n   \
+      \     repeat = (last is not None and last[\"msg\"] == msg_id and rep not in\
+      \ last[\"reps\"]\n                  and now - last[\"t\"] <= self.dup_window_s)\n\
+      \        self._bits_at_last_ok = self._bits_total\n        if repeat:\n    \
+      \        last[\"reps\"].add(rep)\n            last[\"t\"] = now\n          \
+      \  if rep not in self._cur_reps:\n                self._cur_corr += corrected\n\
+      \            self._cur_reps.add(rep)\n            return \"repeat\"\n\n    \
+      \    self._flush_summary()\n        self._last[sender] = {\"msg\": msg_id, \"\
+      reps\": {rep}, \"t\": now}\n        self._cur_id, self._cur_nreps, self._cur_reps,\
+      \ self._cur_corr = msg_id, n_reps, {rep}, corrected\n        text = payload.decode(\"\
+      utf-8\", errors=\"replace\")\n        to = \"all\" if dst == BROADCAST else\
+      \ f\"ID {dst}\"\n        print(\"\\n\" + \"=\" * 40, flush=True)\n        print(f\"\
+      [RX RECEIVED] #{msg_id} from ID {sender} to {to}: {text}\", flush=True)\n  \
+      \      print(\"=\" * 40 + \"\\n\", flush=True)\n\n        meta = pmt.make_dict()\n\
+      \        meta = pmt.dict_add(meta, pmt.intern(\"src_id\"), pmt.from_long(sender))\n\
+      \        meta = pmt.dict_add(meta, pmt.intern(\"dst_id\"), pmt.from_long(dst))\n\
+      \        meta = pmt.dict_add(meta, pmt.intern(\"msg_id\"), pmt.from_long(msg_id))\n\
+      \        meta = pmt.dict_add(meta, pmt.intern(\"n_reps\"), pmt.from_long(n_reps))\n\
+      \        meta = pmt.dict_add(meta, pmt.intern(\"fec_corrected\"), pmt.from_long(corrected))\n\
+      \        vec = pmt.init_u8vector(len(payload), list(payload))\n        self.message_port_pub(pmt.intern(\"\
+      pdu_out\"), pmt.cons(meta, vec))\n        self.message_port_pub(pmt.intern(\"\
+      text_out\"), pmt.intern(text))\n        return \"delivered\"\n\n    # ----------\
+      \ diagnostics helpers ----------\n    def _read_tags(self, n):\n        try:\n\
+      \            tags = self.get_tags_in_window(0, 0, n)\n        except Exception:\n\
+      \            return\n        for t in tags:\n            try:\n            \
+      \    key = pmt.symbol_to_string(t.key)\n            except Exception:\n    \
+      \            continue\n            if key == \"corr_est\":\n               \
+      \ try:\n                    rho = float(pmt.to_double(t.value))\n          \
+      \      except Exception:\n                    rho = float(\"nan\")\n       \
+      \         self._train_pending.append((int(t.offset), rho))\n               \
+      \ self._c[\"train\"] += 1\n            elif key == \"squelch_eob\":\n      \
+      \          self._eobs.append(int(t.offset))\n                self._c[\"sq_eob\"\
+      ] += 1\n        if len(self._eobs) > 512:\n            self._eobs = self._eobs[-256:]\n\
+      \n    def _check_trains(self):\n        \"\"\"Look at the decoded bits around\
+      \ each correlator tag once enough bits have arrived.\"\"\"\n        end_abs\
+      \ = self._hist_abs + len(self._hist)\n        keep = []\n        for off, rho\
+      \ in self._train_pending:\n            if off + 160 > end_abs:\n           \
+      \     keep.append((off, rho))\n                continue\n            a = max(0,\
+      \ off - 64 - self._hist_abs)\n            b = off + 160 - self._hist_abs\n \
+      \           seg = self._hist[a:b].astype(np.int16) * 2 - 1\n            if len(seg)\
+      \ < 96:\n                continue\n            c = np.lib.stride_tricks.sliding_window_view(seg[:len(seg)\
+      \ - 32], 32) @ self._train\n            j = int(np.argmax(c))\n            terr\
+      \ = (32 - int(c[j])) // 2\n            serr = (32 - int(seg[j + 32:j + 64] @\
+      \ self._sync)) // 2\n            sync_abs = self._hist_abs + a + j + 32\n  \
+      \          self._train_seen.append((sync_abs, rho, terr, serr))\n          \
+      \  if terr <= 3 and serr <= self.max_bit_errors:\n                self._c[\"\
+      train_clean\"] += 1\n                verdict = \"clean, deframer can lock\"\n\
+      \            elif terr <= 3:\n                self._c[\"train_bad_sync\"] +=\
+      \ 1\n                verdict = (f\"sync word has more than {self.max_bit_errors}\
+      \ errors -> no lock: bits go wrong right \"\n                           f\"\
+      after the train word (equalizer / Costas / squelch)\")\n            else:\n\
+      \                self._c[\"train_garbage\"] += 1\n                verdict =\
+      \ (\"the train word is not in the decoded bits: the demodulator output is wrong\
+      \ although the \"\n                           \"correlator saw the word (equalizer,\
+      \ Costas, slicer, diff decoder, DC offset)\")\n            self._dbg(f\"train\
+      \ word (corr {rho:.2f}): decoded train word {terr}/32 bits wrong, \"\n     \
+      \                 f\"sync word {serr}/32 wrong -> {verdict}\")\n        self._train_pending\
+      \ = keep\n        if len(self._train_seen) > 64:\n            self._train_seen\
+      \ = self._train_seen[-32:]\n\n    def _cuts(self, a, b):\n        return sum(1\
+      \ for e in self._eobs if a < e < b)\n\n    def _keep(self, buf, start):\n  \
+      \      start = max(0, min(start, len(buf)))\n        self._buf = buf[start:].copy()\n\
+      \        self._buf_abs += start\n\n    # ---------- main loop ----------\n \
+      \   def work(self, input_items, output_items):\n        bits = input_items[0]\
+      \ & 1\n        n_in = len(bits)\n        self._bits_total += n_in\n        if\
+      \ len(self._buf) == 0:\n            self._buf_abs = self.nitems_read(0)\n  \
+      \      self._buf = np.concatenate((self._buf, bits)) if len(self._buf) else\
+      \ bits.copy()\n\n        if self.debug:\n            self._read_tags(n_in)\n\
+      \            if len(self._hist) == 0:\n                self._hist_abs = self.nitems_read(0)\n\
+      \            self._hist = np.concatenate((self._hist, bits))\n            if\
+      \ len(self._hist) > HIST_BITS:\n                cut = len(self._hist) - HIST_BITS\n\
+      \                self._hist = self._hist[cut:]\n                self._hist_abs\
+      \ += cut\n            self._check_trains()\n            if time.monotonic()\
+      \ - self._t_stats >= self.stats_every_s:\n                self._t_stats = time.monotonic()\n\
+      \                self._print_stats()\n\n        # Flush transmission stats once\
+      \ channel has been quiet for > 0.5s of air time\n        if self._cur_id is\
+      \ not None and self._bits_total - self._bits_at_last_ok > 0.5 * self.bit_rate:\n\
+      \            self._flush_summary()\n\n        thr = 32 - 2 * self.max_bit_errors\n\
+      \        hdr_coded, hdr_blk = self._coded_len(HDR_BYTES)\n        hdr_bits =\
+      \ 32 + hdr_coded\n\n        while True:\n            buf = self._buf\n     \
+      \       if len(buf) < hdr_bits:\n                return n_in\n\n           \
+      \ pm = buf.astype(np.int16) * 2 - 1\n            corr = np.lib.stride_tricks.sliding_window_view(pm,\
+      \ 32) @ self._sync\n            cand = np.flatnonzero(corr >= thr)\n\n     \
+      \       if cand.size == 0:\n                self._keep(buf, len(buf) - 31) \
+      \         # keep trailing bits that might begin a sync word\n              \
+      \  return n_in\n\n            i = int(cand[0])\n            if len(buf) < i\
+      \ + hdr_bits:\n                self._keep(buf, i)                      # await\
+      \ complete header bits\n                return n_in\n\n            header, hdr_corr\
+      \ = self._decode_section(buf[i + 32: i + hdr_bits], HDR_BYTES, hdr_blk)\n  \
+      \          length = int.from_bytes(header[:2], \"big\")\n            fa = self._buf_abs\
+      \ + i\n\n            if length == 0 or length > self.max_payload_len:\n    \
+      \            self.n_bad_len += 1\n                self._c[\"bad_len\"] += 1\n\
+      \                if self._near_train(fa):\n                    self._dbg(f\"\
+      frame: sync word found after a train word, but the header length {length} is\
+      \ \"\n                              f\"invalid (FEC fixed {hdr_corr} bits) ->\
+      \ header corrupted\")\n                self._keep(buf, i + 1)              \
+      \    # backtrack 1 bit past false sync\n                continue\n\n       \
+      \     body_coded, body_blk = self._coded_len(length + 4)\n            end =\
+      \ i + hdr_bits + body_coded\n            if len(buf) < end:\n              \
+      \  self._keep(buf, i)                      # await complete frame body bits\n\
+      \                return n_in\n\n            body, body_corr = self._decode_section(buf[i\
+      \ + hdr_bits: end], length + 4, body_blk)\n            payload, rx_crc = body[:length],\
+      \ body[length:]\n            self.n_sync += 1\n            self._c[\"lock\"\
+      ] += 1\n            fe = self._buf_abs + end\n            cuts = self._cuts(fa\
+      \ - 32, fe)\n            cut_txt = f\", squelch closed {cuts}x inside the frame\"\
+      \ if cuts else \"\"\n            corrected = hdr_corr + body_corr\n\n      \
+      \      if zlib.crc32(header + payload) == int.from_bytes(rx_crc, \"big\"):\n\
+      \                self.n_fec_corrected += corrected\n                self.n_ok\
+      \ += 1\n                self._c[\"ok\"] += 1\n                dst, sender, msg_id\
+      \ = header[2], header[3], header[4]\n                self._by_src[sender] =\
+      \ self._by_src.get(sender, 0) + 1\n                to = \"all\" if dst == BROADCAST\
+      \ else f\"ID {dst}\"\n                if sender == self.my_id and not self.accept_all:\n\
+      \                    self._c[\"own\"] += 1\n                    preview = payload[:40].decode(\"\
+      utf-8\", errors=\"replace\")\n                    self._dbg(f\"frame: {length}\
+      \ B, CRC ok, from ID {sender} (this node's own ID) to {to}, \"\n           \
+      \                   f\"msg #{msg_id} '{preview}' -> dropped\")\n           \
+      \         if not self._warned_id:\n                        self._warned_id =\
+      \ True\n                        print(f\"[RX] WARNING: a good frame carried\
+      \ this node's own ID {sender} as sender. If this PC \"\n                   \
+      \           f\"did not just send that text, another PC uses the same CDP_MY_ID:\
+      \ every node needs \"\n                              f\"its own ID. (If it is\
+      \ this PC's own text, its own burst leaked past the CSMA \"\n              \
+      \                f\"receive-off window: raise gate_guard_s.)\", flush=True)\n\
+      \                elif self.accept_all or dst == self.my_id or dst == BROADCAST:\n\
+      \                    what = self._deliver(header, payload, corrected)\n    \
+      \                self._c[what] += 1\n                    self._dbg(f\"frame:\
+      \ {length} B, CRC ok (FEC fixed {corrected} bits), from ID {sender} to {to},\
+      \ \"\n                              f\"msg #{msg_id} -> {'delivered' if what\
+      \ == 'delivered' else 'repeat burst, not shown again'}\")\n                else:\n\
+      \                    self._c[\"other\"] += 1\n                    self._dbg(f\"\
+      frame: {length} B, CRC ok, from ID {sender} to {to}, msg #{msg_id} -> \"\n \
+      \                             f\"for another node, ignored\")\n            \
+      \    self._keep(buf, end)                    # advance past valid frame\n  \
+      \          else:\n                self.n_crc_fail += 1\n                self._c[\"\
+      crc_fail\"] += 1\n                if cuts:\n                    self._c[\"crc_fail_cut\"\
+      ] += 1\n                self._dbg(f\"frame: header says {length} B from ID {header[3]}\
+      \ to {header[2]} msg #{header[4]}, CRC FAIL \"\n                          f\"\
+      (FEC fixed {corrected} bits, still wrong){cut_txt}\")\n                self._keep(buf,\
+      \ i + 1)                  # backtrack 1 bit past false sync\n\n        return\
+      \ n_in\n\n    def _near_train(self, sync_abs):\n        return any(abs(s - sync_abs)\
+      \ <= 8 for s, _, _, _ in self._train_seen)\n"
+    accept_all: '0'
+    affinity: ''
+    alias: ''
+    bit_rate: '375000'
+    comment: 'v6.3: delivers frames to MY_ID or to all (255); drops own frames; accept_all=1
+      = monitor every frame.'
+    debug: '1'
+    dup_window_s: '2.0'
+    fec: FEC
+    interleave: 'True'
+    max_bit_errors: '1'
+    max_dbg_lines: '20'
+    max_payload_len: max_payload_len
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    my_id: MY_ID
+    stats_every_s: '10.0'
+  states:
+    _io_cache: ('Packet Deframer RX (Fast Burst, Hamming, multi-node)', 'PacketDeframerRX',
+      [('my_id', '1'), ('max_bit_errors', '2'), ('max_payload_len', '1024'), ('bit_rate',
+      '375000'), ('fec', '15'), ('interleave', 'True'), ('accept_all', '0'), ('debug',
+      '1'), ('max_dbg_lines', '20'), ('stats_every_s', '10.0'), ('dup_window_s', '2.0')],
+      [('0', 'byte', 1)], [('text_out', 'message', 1), ('pdu_out', 'message', 1)],
+      '', ['accept_all', 'bit_rate', 'debug', 'dup_window_s', 'fec', 'interleave',
+      'max_bit_errors', 'max_dbg_lines', 'max_payload_len', 'my_id', 'stats_every_s'])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [312, 1760.0]
+    rotation: 180
+    state: enabled
+- name: epy_block_0_0_1
+  id: epy_block
+  parameters:
+    _source_code: "\"\"\"\nEmbedded Python Block: Burst Packet Framer TX (Hamming\
+      \ FEC + train word) - v6.3, multi-node addressing\n- Outputs packed byte PDUs\
+      \ (to the CSMA block / PDU to Tagged Stream)\n- Frame layout:\n    [preamble]\
+      \ [train word: F8 DD 42 58] [sync: 1A CF FC 1D] [coded header] [coded body]\
+      \ [postamble]\n  header = [len:2B][dst:1B][src:1B][msg_id:1B][rep:1B][n_reps:1B]\
+      \   (7 bytes; v6.2 had 6, no dst)\n  body   = [payload][CRC32 over header+payload:\
+      \ 4B]\n- src = my_id (this node, 0..254). dst = who should accept the frame:\
+      \ 0..254 one node, 255 = every node.\n  Destination of each message, first match\
+      \ wins:\n    1. PDU metadata key \"dst\" (integer), e.g. set by an upper layer\n\
+      \    2. text messages (QT edit box) starting with \"@<id> \" -> that node, \"\
+      @all \" or \"@* \" -> broadcast;\n       the prefix is removed before sending.\
+      \ Binary PDUs are never parsed for \"@\".\n    3. dest_id (default destination;\
+      \ 255 = broadcast)\n- fec = 0 / 15 / 31 (Hamming), interleave = column-wise\
+      \ codeword order. Must match the deframer.\n- Postamble pads the frame to whole\
+      \ Pluto sink buffers (never shorter than one buffer).\n\"\"\"\nimport zlib\n\
+      import numpy as np\nimport pmt\nfrom gnuradio import gr\n\nSYNC_WORD = bytes([0x1A,\
+      \ 0xCF, 0xFC, 0x1D])\n# 31-bit m-sequence + 1 pad bit. MUST match TRAIN_BITS\
+      \ in the flowgraph (RX side).\nTRAIN_WORD = bytes([0xF8, 0xDD, 0x42, 0x58])\n\
+      BROADCAST = 0xFF\n\n\ndef hamming_tables(n):\n    \"\"\"Standard positional\
+      \ Hamming layout: parity bits at positions 1, 2, 4, 8, (16).\"\"\"\n    m =\
+      \ {15: 4, 31: 5}[n]\n    pos = np.arange(1, n + 1)\n    is_parity = (pos & (pos\
+      \ - 1)) == 0\n    data_idx = np.flatnonzero(~is_parity)          # 0-based indices\
+      \ of data positions\n    par_idx = np.flatnonzero(is_parity)            # 0-based\
+      \ indices of 1, 2, 4, 8, (16)\n    P = ((pos[data_idx, None] >> np.arange(m))\
+      \ & 1).astype(np.int32)   # k x m\n    return data_idx, par_idx, P\n\n\ndef\
+      \ hamming_encode_bits(bits, n, interleave):\n    \"\"\"bits: 0/1 array. Pads\
+      \ to a multiple of k, returns the coded bit array.\"\"\"\n    data_idx, par_idx,\
+      \ P = hamming_tables(n)\n    k = len(data_idx)\n    nblk = -(-len(bits) // k)\n\
+      \    d = np.zeros(nblk * k, dtype=np.int32)\n    d[:len(bits)] = bits\n    d\
+      \ = d.reshape(nblk, k)\n    cw = np.zeros((nblk, n), dtype=np.uint8)\n    cw[:,\
+      \ data_idx] = d\n    cw[:, par_idx] = (d @ P) & 1\n    return (cw.T if interleave\
+      \ else cw).reshape(-1)\n\n\ndef id_name(i):\n    return \"all\" if i == BROADCAST\
+      \ else str(i)\n\n\nclass PacketFramerTX(gr.basic_block):\n    def __init__(self,\
+      \ my_id=1, dest_id=255, preamble_len=64, repeat_count=1, max_payload_len=1024,\n\
+      \                 preamble_byte=0xFF, buffer_size=2048, postamble_byte=0xFF,\
+      \ train_enable=1,\n                 fec=15, interleave=1, samples_per_byte=32):\n\
+      \        gr.basic_block.__init__(\n            self,\n            name=\"Packet\
+      \ Framer TX (Burst, FEC, multi-node)\",\n            in_sig=None,\n        \
+      \    out_sig=None,\n        )\n        self.my_id = int(my_id) & 0xFF\n    \
+      \    self.dest_id = int(dest_id) & 0xFF\n        if self.my_id == BROADCAST:\n\
+      \            raise ValueError(\"my_id 255 is the broadcast address; use 0..254\"\
+      )\n        self.preamble_len = int(preamble_len)\n        self.repeat_count\
+      \ = int(repeat_count)\n        self.max_payload_len = int(max_payload_len)\n\
+      \        self.preamble_byte = int(preamble_byte) & 0xFF\n        self.buffer_size\
+      \ = int(buffer_size)              # Pluto sink buffer, in SAMPLES\n        self.postamble_byte\
+      \ = int(postamble_byte) & 0xFF\n        self.train_enable = int(train_enable)\n\
+      \        self.fec = int(fec)\n        self.interleave = bool(int(interleave))\n\
+      \        self.samples_per_byte = max(1, int(samples_per_byte))   # 8 bits *\
+      \ samples/symbol (BPSK)\n        if self.fec not in (0, 15, 31):\n         \
+      \   raise ValueError(\"fec must be 0, 15 or 31\")\n        self._msg_id = 0\n\
+      \n        self.message_port_register_in(pmt.intern(\"msg_in\"))\n        self.set_msg_handler(pmt.intern(\"\
+      msg_in\"), self.handle_msg)\n        self.message_port_register_out(pmt.intern(\"\
+      pdu_out\"))\n\n    def start(self):\n        print(f\"[TX] this node: ID {self.my_id};\
+      \ messages go to ID {id_name(self.dest_id)} unless they start \"\n         \
+      \     f\"with '@<id> ' or '@all '\", flush=True)\n        return True\n\n  \
+      \  # ---------- input parsing ----------\n    @staticmethod\n    def _extract(msg):\n\
+      \        \"\"\"Returns (payload bytes, dst from metadata or None, is_text).\"\
+      \"\"\n        meta_dst = None\n        if pmt.is_pair(msg):\n            meta,\
+      \ data = pmt.car(msg), pmt.cdr(msg)\n            try:\n                if pmt.is_dict(meta):\n\
+      \                    v = pmt.dict_ref(meta, pmt.intern(\"dst\"), pmt.PMT_NIL)\n\
+      \                    if pmt.is_integer(v):\n                        meta_dst\
+      \ = pmt.to_long(v) & 0xFF\n            except Exception:\n                pass\n\
+      \            if pmt.is_u8vector(data):\n                return bytes(pmt.u8vector_elements(data)),\
+      \ meta_dst, False\n            return str(pmt.to_python(data)).encode(\"utf-8\"\
+      ), meta_dst, True\n        if pmt.is_symbol(msg):\n            return pmt.symbol_to_string(msg).encode(\"\
+      utf-8\"), None, True\n        val = pmt.to_python(msg)\n        if isinstance(val,\
+      \ (bytes, bytearray)):\n            return bytes(val), None, False\n       \
+      \ return str(val).encode(\"utf-8\"), None, True\n\n    @staticmethod\n    def\
+      \ _parse_at(payload):\n        \"\"\"'@3 hello' -> (3, b'hello'); '@all hi'\
+      \ / '@* hi' -> (255, b'hi'); otherwise (None, payload).\"\"\"\n        if not\
+      \ payload.startswith(b\"@\"):\n            return None, payload\n        head,\
+      \ _, rest = payload[1:].partition(b\" \")\n        h = head.decode(\"ascii\"\
+      , \"replace\").lower()\n        if h in (\"all\", \"*\"):\n            return\
+      \ BROADCAST, rest\n        if h.isdigit() and 0 <= int(h) <= 255:\n        \
+      \    return int(h), rest\n        return None, payload\n\n    # ---------- frame\
+      \ building ----------\n    def _encode_section(self, data):\n        bits =\
+      \ np.unpackbits(np.frombuffer(data, dtype=np.uint8))\n        return hamming_encode_bits(bits,\
+      \ self.fec, self.interleave)\n\n    def _coded_body(self, header, payload):\n\
+      \        \"\"\"Everything after the sync word: header + payload + CRC, coded\
+      \ if fec != 0.\"\"\"\n        crc = zlib.crc32(header + payload).to_bytes(4,\
+      \ \"big\")\n        if self.fec == 0:\n            return header + payload +\
+      \ crc\n        coded = np.concatenate((self._encode_section(header),\n     \
+      \                           self._encode_section(payload + crc)))\n        return\
+      \ np.packbits(coded).tobytes()               # pads the last byte with 0s\n\n\
+      \    def _postamble_len(self, raw_len):\n        \"\"\"Bytes of postamble: at\
+      \ least one sink buffer, and total a whole number of buffers.\"\"\"\n      \
+      \  if self.buffer_size <= 0:\n            return 0\n        unit = max(1, -(-self.buffer_size\
+      \ // self.samples_per_byte))    # bytes per sink buffer\n        need = raw_len\
+      \ + unit                                           # leave one full buffer of\
+      \ postamble\n        return (-(-need // unit)) * unit - raw_len\n\n    def build_frame(self,\
+      \ header, payload):\n        preamble = bytes([self.preamble_byte]) * self.preamble_len\n\
+      \        train = TRAIN_WORD if self.train_enable else b\"\"\n        raw = preamble\
+      \ + train + SYNC_WORD + self._coded_body(header, payload)\n        return raw\
+      \ + bytes([self.postamble_byte]) * self._postamble_len(len(raw))\n\n    def\
+      \ handle_msg(self, msg):\n        try:\n            payload, dst, is_text =\
+      \ self._extract(msg)\n        except Exception as e:\n            print(f\"\
+      [TX] Could not parse message: {e}\", flush=True)\n            return\n     \
+      \   if dst is None and is_text:\n            dst, payload = self._parse_at(payload)\n\
+      \        if dst is None:\n            dst = self.dest_id\n        if dst ==\
+      \ self.my_id:\n            print(f\"[TX] message addressed to this node (ID\
+      \ {dst}) not sent\", flush=True)\n            return\n        if not payload:\n\
+      \            return\n\n        if len(payload) > self.max_payload_len:\n   \
+      \         print(f\"[TX] Payload {len(payload)} B truncated to {self.max_payload_len}\
+      \ B\", flush=True)\n            payload = payload[: self.max_payload_len]\n\n\
+      \        msg_id = self._msg_id\n        self._msg_id = (self._msg_id + 1) &\
+      \ 0xFF\n        n_reps = max(1, min(255, self.repeat_count))\n\n        fec_txt\
+      \ = \"no FEC\" if self.fec == 0 else f\"Hamming({self.fec},{self.fec - (4 if\
+      \ self.fec == 15 else 5)})\"\n        shown = payload.decode(\"utf-8\", \"replace\"\
+      ) if is_text else f\"{len(payload)} B binary\"\n        print(f\"[TX] msg #{msg_id}\
+      \ from ID {self.my_id} to ID {id_name(dst)}: '{shown}' \"\n              f\"\
+      ({n_reps} bursts queued, {fec_txt})\", flush=True)\n\n        for rep in range(n_reps):\n\
+      \            header = len(payload).to_bytes(2, \"big\") + bytes([dst, self.my_id,\
+      \ msg_id, rep, n_reps])\n            frame = self.build_frame(header, payload)\n\
+      \n            meta = pmt.make_dict()\n            meta = pmt.dict_add(meta,\
+      \ pmt.intern(\"tx_sob\"), pmt.PMT_T)\n            meta = pmt.dict_add(meta,\
+      \ pmt.intern(\"tx_eob\"), pmt.PMT_T)\n            sob_tag = pmt.make_tuple(pmt.from_long(0),\
+      \ pmt.intern(\"tx_sob\"), pmt.PMT_T)\n            eob_tag = pmt.make_tuple(pmt.from_long(len(frame)\
+      \ - 1), pmt.intern(\"tx_eob\"), pmt.PMT_T)\n            meta = pmt.dict_add(meta,\
+      \ pmt.intern(\"extra_tags\"), pmt.list2(sob_tag, eob_tag))\n\n            vec\
+      \ = pmt.init_u8vector(len(frame), list(frame))\n            self.message_port_pub(pmt.intern(\"\
+      pdu_out\"), pmt.cons(meta, vec))\n"
+    affinity: ''
+    alias: ''
+    buffer_size: BUFFER_SIZE
+    comment: v6.3 header [len][dst][src][msg][rep][nreps]. Text '@3 hi' -> node 3,
+      '@all hi' -> everyone, else DEST_ID.
+    dest_id: DEST_ID
+    fec: FEC
+    interleave: 'True'
+    max_payload_len: max_payload_len
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    my_id: MY_ID
+    postamble_byte: '0xFF'
+    preamble_byte: '0xFF'
+    preamble_len: '128'
+    repeat_count: '1'
+    samples_per_byte: 8*sps
+    train_enable: '1'
+  states:
+    _io_cache: ('Packet Framer TX (Burst, FEC, multi-node)', 'PacketFramerTX', [('my_id',
+      '1'), ('dest_id', '255'), ('preamble_len', '64'), ('repeat_count', '1'), ('max_payload_len',
+      '1024'), ('preamble_byte', '255'), ('buffer_size', '2048'), ('postamble_byte',
+      '255'), ('train_enable', '1'), ('fec', '15'), ('interleave', '1'), ('samples_per_byte',
+      '32')], [('msg_in', 'message', 1)], [('pdu_out', 'message', 1)], '', ['buffer_size',
+      'dest_id', 'fec', 'interleave', 'max_payload_len', 'my_id', 'postamble_byte',
+      'preamble_byte', 'preamble_len', 'repeat_count', 'samples_per_byte', 'train_enable'])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [816, 1980.0]
+    rotation: 180
+    state: enabled
+- name: epy_block_1
+  id: epy_block
+  parameters:
+    _source_code: "\"\"\"\nEmbedded Python Block: Test Traffic RX  (receive logger)\n\
+      \nConnect:  Packet Deframer RX  pdu_out  ->  pdu_in\n\nEvery frame the deframer\
+      \ delivers is written to  <log_dir>/rx_<date>_<time>.csv  with a wall-clock\n\
+      timestamp (microseconds), the test run_id / seq when the payload carries the\
+      \ test header (A5 5A ...),\nthe deframer's msg_id, and the payload as hex. Non-test\
+      \ frames (chat etc.) are logged with is_test = 0.\nOne file per flowgraph start;\
+      \ rows are flushed immediately, so the log survives a crash or Ctrl-C.\nPrints\
+      \ a running count per test run (received, missing so far, delivery %).\nThe\
+      \ deframer only delivers CRC-good frames, so this log holds correct packets\
+      \ only; losses are\nfound by the analysis script from the gaps against the TX\
+      \ log.\n\"\"\"\nimport csv\nimport datetime\nimport os\nimport socket\nimport\
+      \ time\n\nimport pmt\nfrom gnuradio import gr\n\nMAGIC = b\"\\xA5\\x5A\"\nRX_FIELDS\
+      \ = [\"rx_time_us\", \"rx_time_iso\", \"is_test\", \"run_id\", \"seq\", \"size\"\
+      , \"msg_id\", \"host\", \"payload_hex\"]\n\n\nclass TestTrafficRX(gr.basic_block):\n\
+      \    def __init__(self, log_dir=\"~/link_tests\", verbose=1, print_every=10):\n\
+      \        gr.basic_block.__init__(self, name=\"Test Traffic RX\", in_sig=None,\
+      \ out_sig=None)\n        self.log_dir = str(log_dir)\n        self.verbose =\
+      \ int(verbose)\n        self.print_every = max(1, int(print_every))\n      \
+      \  self._host = socket.gethostname()\n        self._f = None\n        self._w\
+      \ = None\n        self._path = None\n        self._runs = {}            # run_id\
+      \ -> {\"seqs\": set, \"max\": int, \"dups\": int}\n        self._n_other = 0\n\
+      \n        self.message_port_register_in(pmt.intern(\"pdu_in\"))\n        self.set_msg_handler(pmt.intern(\"\
+      pdu_in\"), self._handle)\n\n    # ----------------------------------------------------------------\
+      \ file\n    def start(self):\n        self._open()\n        return True\n\n\
+      \    def stop(self):\n        self._summary()\n        if self._f:\n       \
+      \     self._f.close()\n            self._f = None\n        return True\n\n \
+      \   def _open(self):\n        if self._f:\n            return\n        d = os.path.expanduser(self.log_dir)\n\
+      \        os.makedirs(d, exist_ok=True)\n        self._path = os.path.join(d,\
+      \ f\"rx_{datetime.datetime.now():%Y%m%d_%H%M%S}.csv\")\n        self._f = open(self._path,\
+      \ \"w\", newline=\"\")\n        self._w = csv.writer(self._f)\n        self._w.writerow(RX_FIELDS)\n\
+      \        self._f.flush()\n        print(f\"[TEST RX] logging received frames\
+      \ to {self._path}\", flush=True)\n\n    # ----------------------------------------------------------------\
+      \ messages\n    def _handle(self, msg):\n        t_us = time.time_ns() // 1000\n\
+      \        meta = pmt.PMT_NIL\n        try:\n            data = msg\n        \
+      \    if pmt.is_pair(msg):\n                meta, data = pmt.car(msg), pmt.cdr(msg)\n\
+      \            if pmt.is_u8vector(data):\n                payload = bytes(pmt.u8vector_elements(data))\n\
+      \            elif pmt.is_symbol(data):\n                payload = pmt.symbol_to_string(data).encode(\"\
+      utf-8\")\n            else:\n                payload = str(pmt.to_python(data)).encode(\"\
+      utf-8\")\n        except Exception as e:\n            print(f\"[TEST RX] could\
+      \ not parse message: {e!r}\", flush=True)\n            return\n\n        msg_id\
+      \ = -1\n        try:\n            if pmt.is_dict(meta):\n                v =\
+      \ pmt.dict_ref(meta, pmt.intern(\"msg_id\"), pmt.PMT_NIL)\n                if\
+      \ pmt.is_integer(v):\n                    msg_id = pmt.to_long(v)\n        except\
+      \ Exception:\n            pass\n\n        is_test = len(payload) >= 8 and payload[:2]\
+      \ == MAGIC\n        run_id = int.from_bytes(payload[2:4], \"big\") if is_test\
+      \ else -1\n        seq = int.from_bytes(payload[4:8], \"big\") if is_test else\
+      \ -1\n\n        self._open()\n        self._w.writerow([t_us,\n            \
+      \              datetime.datetime.fromtimestamp(t_us / 1e6).isoformat(timespec=\"\
+      milliseconds\"),\n                          int(is_test), run_id, seq, len(payload),\
+      \ msg_id, self._host, payload.hex()])\n        self._f.flush()\n\n        if\
+      \ not is_test:\n            self._n_other += 1\n            return\n       \
+      \ st = self._runs.setdefault(run_id, {\"seqs\": set(), \"max\": -1, \"dups\"\
+      : 0})\n        if seq in st[\"seqs\"]:\n            st[\"dups\"] += 1\n    \
+      \    st[\"seqs\"].add(seq)\n        st[\"max\"] = max(st[\"max\"], seq)\n  \
+      \      n = len(st[\"seqs\"])\n        if self.verbose and (n == 1 or n % self.print_every\
+      \ == 0):\n            expected = st[\"max\"] + 1\n            print(f\"[TEST\
+      \ RX] run {run_id:04x}: {n} received, last seq {seq}, {expected - n} missing\
+      \ so far \"\n                  f\"({100.0 * n / expected:.1f}% of seq 0..{st['max']})\"\
+      , flush=True)\n\n    def _summary(self):\n        for run_id, st in self._runs.items():\n\
+      \            n, expected = len(st[\"seqs\"]), st[\"max\"] + 1\n            print(f\"\
+      [TEST RX] run {run_id:04x} total: {n} received of seq 0..{st['max']} \"\n  \
+      \                f\"({100.0 * n / max(expected, 1):.1f}%), {st['dups']} duplicates\"\
+      , flush=True)\n        if self._n_other:\n            print(f\"[TEST RX] {self._n_other}\
+      \ non-test frames logged\", flush=True)\n        if self._path:\n          \
+      \  print(f\"[TEST RX] log: {self._path}\", flush=True)"
+    affinity: ''
+    alias: ''
+    comment: ''
+    log_dir: '"~/link_tests"'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    print_every: '10'
+    verbose: '1'
+  states:
+    _io_cache: ('Test Traffic RX', 'TestTrafficRX', [('log_dir', "'~/link_tests'"),
+      ('verbose', '1'), ('print_every', '10')], [('pdu_in', 'message', 1)], [], '',
+      ['log_dir', 'print_every', 'verbose'])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [336, 2016.0]
+    rotation: 0
+    state: disabled
+- name: epy_block_corr
+  id: epy_block
+  parameters:
+    _source_code: "\"\"\"\nEmbedded Python Block: Training-word correlator (drop-in\
+      \ for digital_corr_est_cc)\n- Input : complex stream at 2 samples/symbol (symbol\
+      \ sync output)\n- Output: the same stream delayed by a fixed EVEN number of\
+      \ samples (so tags can be placed in the past\n  without shifting the symbol\
+      \ / midpoint sample phase)\n- Slides the reference (TRAIN_REF) over the stream\
+      \ and computes the NORMALIZED correlation\n      rho = |sum(conj(ref) * x)|^2\
+      \ / (E_ref * E_window)      (0..1, independent of signal amplitude)\n  Where\
+      \ rho has a local maximum above thr it adds a 'corr_est' tag (and 'corr_start')\
+      \ on the\n  first training symbol, shifted by mark_delay samples. Random data\
+      \ gives rho ~ 0.1-0.25; a real\n  training word gives ~0.8-1.0, so thr ~ 0.6-0.7\
+      \ is a good start. The tag value is rho.\n- Pure numpy, bounds-checked: no use\
+      \ of GNU Radio's corr_est_cc.\n\"\"\"\nimport numpy as np\nimport pmt\nfrom\
+      \ gnuradio import gr\n\n\nclass TrainCorr(gr.sync_block):\n    def __init__(self,\
+      \ ref=None, thr=0.7, mark_delay=0, verbose=1):\n        gr.sync_block.__init__(\n\
+      \            self,\n            name=\"Training-word Correlator\",\n       \
+      \     in_sig=[np.complex64],\n            out_sig=[np.complex64],\n        )\n\
+      \        if ref is None:\n            ref = [1.0]\n        self._ref = np.asarray(ref,\
+      \ dtype=np.complex64)\n        self._L = len(self._ref)\n        self._E = float(np.sum(np.abs(self._ref)\
+      \ ** 2))\n        self.thr = float(thr)\n        self.mark_delay = max(0, int(mark_delay))\n\
+      \        self.verbose = int(verbose)\n        # Output delay: >= L + 3 so every\
+      \ peak is examined exactly once, and a MULTIPLE OF 2 (samples per\n        #\
+      \ symbol) so the symbol-timed samples stay on even stream indices -- the linear\
+      \ equalizer takes\n        # the first sample of every 2-sample block, so an\
+      \ odd delay would make it sample the midpoints.\n        self._D = self._L +\
+      \ 8\n        self._D += self._D % 2\n        self.set_history(self._D + 1)\n\
+      \        self._next_p = 0               # first absolute input index not yet\
+      \ examined\n        self._last_p = -10**12         # last tagged absolute input\
+      \ index\n        self._seen = 0                 # samples since last status\
+      \ line\n        self._best = 0.0               # strongest normalized correlation\
+      \ since last status line\n\n    def work(self, input_items, output_items):\n\
+      \        x = input_items[0]\n        out = output_items[0]\n        n_out =\
+      \ len(out)\n        out[:] = x[:n_out]             # in[i] <-> absolute input\
+      \ index a-D+i  ==  output index a+i\n\n        a = self.nitems_written(0)\n\
+      \        base = a - self._D             # absolute input index of x[0]\n   \
+      \     if len(x) < self._L + 5:\n            return n_out\n        c = np.correlate(x,\
+      \ self._ref, \"valid\")                  # window starting at x[n]\n       \
+      \ w = np.convolve(np.abs(x).astype(np.float64) ** 2, np.ones(self._L), \"valid\"\
+      )\n        m = (np.abs(c).astype(np.float64) ** 2) / (self._E * w + 1e-12) \
+      \   # normalized, 0..1\n        self._best = max(self._best, float(m.max()))\n\
+      \        self._seen += n_out\n\n        n0 = max(self._next_p - base, 2, -base)\
+      \       # first window start to examine (p >= 0)\n        n1 = len(m) - 3  \
+      \                             # last start with 2 neighbours on the right\n\
+      \        if n1 >= n0:\n            seg = m[n0 - 2 : n1 + 3]\n            mid\
+      \ = seg[2:-2]\n            thr_abs = self.thr\n            cond = (\n      \
+      \          (mid > thr_abs)\n                & (mid > seg[0:-4]) & (mid > seg[1:-3])\n\
+      \                & (mid >= seg[3:-1]) & (mid >= seg[4:])\n            )\n  \
+      \          for j in np.flatnonzero(cond):\n                p = base + n0 + int(j)\n\
+      \                if p - self._last_p < self._L:\n                    continue\n\
+      \                self._last_p = p\n                ratio = float(mid[j])\n \
+      \               off = int(p + self._D + self.mark_delay)    # output index;\
+      \ always >= a\n                val = pmt.from_double(ratio)\n              \
+      \  self.add_item_tag(0, off, pmt.intern(\"corr_start\"), val)\n            \
+      \    self.add_item_tag(0, off, pmt.intern(\"corr_est\"), val)\n            \
+      \    self._best = 0.0\n                self._seen = 0\n                if self.verbose:\n\
+      \                    print(f\"[CORR] train word found: correlation = {ratio:.2f}\
+      \ (thr {self.thr:.2f})\", flush=True)\n            self._next_p = base + n1\
+      \ + 1\n\n        if self.verbose and self._seen > 400000:\n            if self._best\
+      \ > 0.35:\n                print(f\"[CORR] no tag; strongest correlation in\
+      \ last window = {self._best:.2f} (thr {self.thr:.2f})\", flush=True)\n     \
+      \       self._best = 0.0\n            self._seen = 0\n        return n_out\n"
+    affinity: ''
+    alias: ''
+    comment: Python replacement for digital_corr_est_cc (avoids its out-of-range read).
+    mark_delay: train_delay
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    ref: TRAIN_REF
+    thr: corr_thr
+    verbose: '1'
+  states:
+    _io_cache: ('Training-word Correlator', 'TrainCorr', [('ref', 'None'), ('thr',
+      '0.7'), ('mark_delay', '0'), ('verbose', '1')], [('0', 'complex', 1)], [('0',
+      'complex', 1)], '', ['mark_delay', 'thr', 'verbose'])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [2048, 632.0]
+    rotation: 0
+    state: enabled
+- name: epy_csma
+  id: epy_block
+  parameters:
+    _source_code: "\"\"\"\nEmbedded Python Block: CSMA/CA MAC  (carrier sense + slotted\
+      \ random backoff, single frequency)\n\nWiring\n  RX  : Pluto Source  -> in0\
+      \ (this block) -> out0 -> Power Squelch -> ... (rest of the RX chain)\n  TX\
+      \  : Packet Framer TX pdu_out -> pdu_in (this block) ;  pdu_out -> PDU to Tagged\
+      \ Stream -> modulator -> Pluto Sink\n  ctrl: optional messages \"fail\"/\"collision\"\
+      \ (double the contention window), \"ok\" (reset it), \"flush\" (empty the queue)\n\
+      \nCarrier sense (spike-proof)\n  Every nfft samples the block takes an FFT and\
+      \ uses the MEDIAN power of the bins inside +/- cs_bw_hz/2\n  (bins within dc_exclude_hz\
+      \ of 0 Hz are left out). A data burst raises every in-band bin, so the median\n\
+      \  rises; a narrow spike (LO leakage / carrier left after a burst) lifts one\
+      \ or two bins and does not move the\n  median. The median is smoothed over sense_s\
+      \ and compared with a tracked noise floor:\n      busy  when  cs > floor + cs_margin_db\
+      \ ;   idle again when  cs < floor + cs_margin_db - cs_hyst_db\n  The floor is\
+      \ the floor_percentile of cs over the last floor_window_s (own transmissions\
+      \ excluded); it falls\n  at once but rises at most floor_rise_db_s dB/s, so\
+      \ traffic cannot drag it up.\n\nAccess (CSMA/CA, as in 802.11 DCF without ACKs)\n\
+      \  Before every frame: draw a backoff of 0 .. cw-1 slots. Slot boundaries are\
+      \ counted from the moment the\n  channel went quiet: quiet start + difs_s, +\
+      \ slot_s, + 2*slot_s ... Each boundary reached while idle uses up\n  one slot;\
+      \ the frame is released at the boundary where the count reaches zero. A busy\
+      \ channel freezes the\n  count; after it, DIFS again and the count continues.\
+      \ Because both nodes anchor their boundaries on the same\n  burst end, two frames\
+      \ only collide if they picked the same boundary. cw starts at cw_min; \"fail\"\
+      \ messages\n  on ctrl double it up to cw_max, \"ok\" resets it (wire these from\
+      \ the ARQ layer if available).\n\nOwn transmission (half duplex): receiver off\
+      \ while we send\n  From the moment a frame is released the receiver is \"off\"\
+      : no sensing, no floor update, and (blank_rx = 1)\n  the RX output is zeroed\
+      \ so the squelch / AGC / FLL / equalizer / deframer never see our own burst.\n\
+      \  gate_mode = 1 (default): the receiver comes back at a fixed time,\n     \
+      \   release + tx_delay + airtime + gate_guard_s\n     where tx_delay is the\
+      \ TX + RX latency of the radios (tx_delay_s, replaced by the measured echo delay\
+      \ once\n     3 own bursts have been seen, if auto_delay = 1). Nothing waits\
+      \ for the echo to end.\n  gate_mode = 0: the receiver comes back when our own\
+      \ echo has ended (+ tail_s), or after\n     echo_timeout_s + airtime + tail_s\
+      \ if no echo is seen.\n  The echo delay = the window in which both nodes can\
+      \ still collide; slot_s must be longer than it.\n  The measured value is printed\
+      \ in the stats line.\n\nAll timing runs on the RX sample clock (samples / samp_rate),\
+      \ not on the PC clock.\nThe stats line also shows how many samples per second\
+      \ really arrive from the radio (PC clock). Below ~99 % of\nsamp_rate the PC\
+      \ is not keeping up and the radio drops samples: frames then fail CRC although\
+      \ the train word is\nfound. It also shows how much of one CPU core this block\
+      \ uses.\nRead-out for QT widgets (Function Probe): cs_db(), threshold_db(),\
+      \ floor_db(), is_busy(), is_tx(), queue_len()\n\"\"\"\nimport collections\n\
+      import threading\nimport time\n\nimport numpy as np\nimport pmt\nfrom gnuradio\
+      \ import gr\n\n\nclass CsmaMac(gr.sync_block):\n    def __init__(self, samp_rate=1.5e6,\
+      \ samples_per_byte=32, slot_s=0.015, difs_s=0.020,\n                 cw_min=8,\
+      \ cw_max=128, cs_margin_db=6.0, cs_hyst_db=2.0, cs_bw_hz=400e3,\n          \
+      \       dc_exclude_hz=10e3, nfft=256, sense_s=0.001, floor_window_s=2.0,\n \
+      \                floor_percentile=10.0, floor_rise_db_s=1.0, echo_timeout_s=0.100,\
+      \ tail_s=0.002,\n                 blank_rx=1, max_queue=64, max_defer_s=0.0,\
+      \ verbose=1, stats_every_s=10.0,\n                 gate_mode=1, tx_delay_s=0.009,\
+      \ auto_delay=1, gate_guard_s=0.002):\n        gr.sync_block.__init__(self, name=\"\
+      CSMA/CA MAC\", in_sig=[np.complex64], out_sig=[np.complex64])\n        self.samp_rate\
+      \ = float(samp_rate)\n        self.samples_per_byte = float(samples_per_byte)\n\
+      \        self.slot_s = float(slot_s)\n        self.difs_s = float(difs_s)\n\
+      \        self.cw_min = max(1, int(cw_min))\n        self.cw_max = max(self.cw_min,\
+      \ int(cw_max))\n        self.cs_margin_db = float(cs_margin_db)\n        self.cs_hyst_db\
+      \ = float(cs_hyst_db)\n        self.floor_percentile = float(floor_percentile)\n\
+      \        self.floor_rise_db_s = float(floor_rise_db_s)\n        self.echo_timeout_s\
+      \ = float(echo_timeout_s)\n        self.tail_s = float(tail_s)\n        self.blank_rx\
+      \ = int(blank_rx)\n        self.gate_mode = int(gate_mode)\n        self.tx_delay_s\
+      \ = float(tx_delay_s)\n        self.auto_delay = int(auto_delay)\n        self.gate_guard_s\
+      \ = float(gate_guard_s)\n        self._sense_s = float(sense_s)\n        self.max_queue\
+      \ = max(1, int(max_queue))\n        self.max_defer_s = float(max_defer_s)\n\
+      \        self.verbose = int(verbose)\n        self.stats_every_s = float(stats_every_s)\n\
+      \n        # ---- carrier-sense front end\n        self._nfft = int(nfft)\n \
+      \       self._dt = self._nfft / self.samp_rate                          # time\
+      \ per FFT block\n        f = np.fft.fftfreq(self._nfft, 1.0 / self.samp_rate)\n\
+      \        sel = (np.abs(f) <= float(cs_bw_hz) / 2) & (np.abs(f) >= float(dc_exclude_hz))\n\
+      \        self._bins = np.flatnonzero(sel)\n        if self._bins.size < 8:\n\
+      \            raise ValueError(\"cs_bw_hz / dc_exclude_hz / nfft leave fewer\
+      \ than 8 bins to sense\")\n        self._win = np.hanning(self._nfft).astype(np.float32)\n\
+      \        # median of |X|^2 of white noise = ln2 * nfft * mean(w^2) * power \
+      \ -> scale to \"white-equivalent\" power\n        self._norm = 1.0 / (np.log(2.0)\
+      \ * self._nfft * float(np.mean(self._win ** 2)))\n        self._smooth = collections.deque(maxlen=max(1,\
+      \ int(round(float(sense_s) / self._dt))))\n        self._carry = np.zeros(0,\
+      \ np.complex64)\n        self._cs_db = -200.0\n        n_hist = max(64, int(float(floor_window_s)\
+      \ / self._dt))\n        self._hist = collections.deque(maxlen=n_hist)\n    \
+      \    self._floor_db = None\n        self._floor_next = 0.0\n        self._busy\
+      \ = True\n\n        # ---- MAC state\n        self._lock = threading.Lock()\n\
+      \        self._queue = collections.deque()\n        self._cw = self.cw_min\n\
+      \        self._backoff = None\n        self._idle_run = 0.0\n        self._rng\
+      \ = np.random.default_rng()\n        self._n_abs = 0                       #\
+      \ absolute input sample index of the next new sample\n        self._t = 0.0\
+      \                         # current time on the RX sample clock, s\n       \
+      \ self._self_tx = False\n        self._tx = {}\n\n        # ---- statistics\n\
+      \        self._st = collections.Counter()\n        self._echo_delays = collections.deque(maxlen=200)\n\
+      \        self._access_delays = collections.deque(maxlen=200)\n        self._busy_time\
+      \ = 0.0\n        self._stat_t0 = 0.0\n        self._warned_no_echo = False\n\
+      \        self._wall0 = None                    # PC clock at the start of the\
+      \ stats window\n        self._n_wall0 = 0                     # samples received\
+      \ before that\n        self._cpu = 0.0                       # seconds spent\
+      \ in work() in this stats window\n        self._windows = 0\n\n        self.message_port_register_in(pmt.intern(\"\
+      pdu_in\"))\n        self.set_msg_handler(pmt.intern(\"pdu_in\"), self._on_pdu)\n\
+      \        self.message_port_register_in(pmt.intern(\"ctrl\"))\n        self.set_msg_handler(pmt.intern(\"\
+      ctrl\"), self._on_ctrl)\n        self.message_port_register_out(pmt.intern(\"\
+      pdu_out\"))\n\n    # ------------------------------------------------------------------\
+      \ read-outs (Function Probe)\n    def cs_db(self):\n        return float(self._cs_db)\n\
+      \n    def floor_db(self):\n        return float(self._floor_db) if self._floor_db\
+      \ is not None else -200.0\n\n    def threshold_db(self):\n        return self.floor_db()\
+      \ + self.cs_margin_db\n\n    def is_busy(self):\n        return int(self._busy\
+      \ or self._self_tx)\n\n    def is_tx(self):\n        return int(self._self_tx)\n\
+      \n    def queue_len(self):\n        return len(self._queue)\n\n    # ------------------------------------------------------------------\
+      \ messages\n    def _on_pdu(self, msg):\n        if not pmt.is_pair(msg) or\
+      \ not pmt.is_u8vector(pmt.cdr(msg)):\n            print(\"[CSMA] pdu_in expects\
+      \ a PDU (meta . u8vector) from the framer; message ignored\", flush=True)\n\
+      \            return\n        with self._lock:\n            if len(self._queue)\
+      \ >= self.max_queue:\n                self._queue.popleft()\n              \
+      \  self._st[\"dropped\"] += 1\n                print(f\"[CSMA] queue full ({self.max_queue}):\
+      \ oldest frame dropped\", flush=True)\n            self._queue.append((msg,\
+      \ self._t))\n\n    def _on_ctrl(self, msg):\n        try:\n            txt =\
+      \ str(pmt.to_python(pmt.car(msg) if pmt.is_pair(msg) else msg)).lower()\n  \
+      \      except Exception:\n            txt = \"\"\n        if \"fail\" in txt\
+      \ or \"collision\" in txt or \"nack\" in txt:\n            self._cw = min(self.cw_max,\
+      \ self._cw * 2)\n        elif \"ok\" in txt or \"success\" in txt or \"ack\"\
+      \ in txt:\n            self._cw = self.cw_min\n        elif \"flush\" in txt:\n\
+      \            with self._lock:\n                self._queue.clear()\n\n    #\
+      \ ------------------------------------------------------------------ carrier\
+      \ sense helpers\n    def _update_floor(self):\n        if len(self._hist) <\
+      \ self._hist.maxlen // 4:\n            return\n        raw = float(np.percentile(np.fromiter(self._hist,\
+      \ float, len(self._hist)), self.floor_percentile))\n        if self._floor_db\
+      \ is None or raw <= self._floor_db:\n            self._floor_db = raw\n    \
+      \    else:\n            self._floor_db = min(raw, self._floor_db + self.floor_rise_db_s\
+      \ * 0.05)\n\n    def _release(self):\n        with self._lock:\n           \
+      \ if not self._queue:\n                return\n            msg, t_enq = self._queue.popleft()\n\
+      \        nbytes = pmt.length(pmt.cdr(msg))\n        airtime = nbytes * self.samples_per_byte\
+      \ / self.samp_rate\n        self.message_port_pub(pmt.intern(\"pdu_out\"), msg)\n\
+      \        self._self_tx = True\n        delay = self._tx_delay()\n        self._tx\
+      \ = {\"t0\": self._t, \"air\": airtime, \"echo_t\": None, \"low_since\": None,\n\
+      \                    \"hard_end\": self._t + self.echo_timeout_s + airtime +\
+      \ self.tail_s + 0.02,\n                    \"win_end\": self._t + delay + airtime\
+      \ + self.gate_guard_s}\n        self._backoff, self._idle_run = None, 0.0\n\
+      \        self._st[\"tx\"] += 1\n        self._access_delays.append(self._t -\
+      \ t_enq)\n        if self.verbose >= 2:\n            print(f\"[CSMA] TX {nbytes}\
+      \ B frame ({airtime * 1e3:.1f} ms) after {1e3 * (self._t - t_enq):.1f} ms \"\
+      \n                  f\"in queue, cw {self._cw}\", flush=True)\n\n    def _tx_delay(self):\n\
+      \        \"\"\"TX + RX latency used for the fixed receive-off window: measured\
+      \ echo delay if available.\"\"\"\n        if self.auto_delay and len(self._echo_delays)\
+      \ >= 3:\n            return float(np.median(self._echo_delays))\n        return\
+      \ self.tx_delay_s\n\n    def _end_self_tx(self, reason):\n        self._self_tx\
+      \ = False\n        # the channel went quiet when our echo dropped (tail_s ago):\
+      \ count idle time from there, so our slot\n        # grid lines up with the\
+      \ other node's, which saw the same burst end\n        if reason == \"echo_end\"\
+      :\n            self._idle_run = self.tail_s\n        elif reason == \"window\"\
+      :\n            # window end = predicted end of our echo + guard; the other node\
+      \ notices the end about sense_s\n            # after the echo stops, so start\
+      \ our idle count so that both slot grids line up\n            self._idle_run\
+      \ = self.gate_guard_s - self._sense_s\n        else:\n            self._idle_run\
+      \ = 0.0\n        if reason == \"timeout\" and self._tx.get(\"echo_t\") is None:\n\
+      \            self._st[\"no_echo\"] += 1\n            if not self._warned_no_echo:\n\
+      \                self._warned_no_echo = True\n                print(\"[CSMA]\
+      \ own burst not seen on our receiver: RX blanking falls back to the timer \"\
+      \n                      \"(echo_timeout_s + airtime). Check the TX, or raise\
+      \ echo_timeout_s.\", flush=True)\n\n    # ------------------------------------------------------------------\
+      \ one sense step (nfft samples)\n    def _step(self, cs_db):\n        dt = self._dt\n\
+      \        thr_on = (self._floor_db if self._floor_db is not None else 1e9) +\
+      \ self.cs_margin_db\n        loud = cs_db > thr_on\n\n        if self._self_tx\
+      \ and self.gate_mode == 1:           # fixed receive-off window\n          \
+      \  tx = self._tx\n            if tx[\"echo_t\"] is None and loud and self._t\
+      \ < tx[\"win_end\"]:\n                tx[\"echo_t\"] = self._t             \
+      \         # measure TX + RX latency for auto_delay\n                self._echo_delays.append(self._t\
+      \ - tx[\"t0\"])\n            if self._t >= tx[\"win_end\"]:\n              \
+      \  if tx[\"echo_t\"] is None:\n                    self._st[\"no_echo\"] +=\
+      \ 1\n                self._end_self_tx(\"window\")\n            return\n\n \
+      \       if self._self_tx:                                   # gate_mode 0: wait\
+      \ until our own echo has ended\n            tx = self._tx\n            if tx[\"\
+      echo_t\"] is None:\n                if loud:\n                    tx[\"echo_t\"\
+      ] = self._t\n                    self._echo_delays.append(self._t - tx[\"t0\"\
+      ])\n                elif self._t - tx[\"t0\"] > self.echo_timeout_s + tx[\"\
+      air\"] + self.tail_s:\n                    self._end_self_tx(\"timeout\")\n\
+      \                    return\n            else:\n                if loud:\n \
+      \                   tx[\"low_since\"] = None\n                elif tx[\"low_since\"\
+      ] is None:\n                    tx[\"low_since\"] = self._t\n              \
+      \  elif self._t - tx[\"low_since\"] >= self.tail_s:\n                    self._end_self_tx(\"\
+      echo_end\")\n                    return\n            if self._t >= tx[\"hard_end\"\
+      ]:\n                self._end_self_tx(\"timeout\")\n            return\n\n \
+      \       # channel state with hysteresis (busy until the floor is known)\n  \
+      \      self._hist.append(cs_db)\n        if self._floor_db is None:\n      \
+      \      self._busy = True\n        elif self._busy:\n            self._busy =\
+      \ cs_db > thr_on - self.cs_hyst_db\n        else:\n            self._busy =\
+      \ loud\n        if self._busy:\n            self._busy_time += dt\n\n      \
+      \  with self._lock:\n            pending = len(self._queue)\n            t_head\
+      \ = self._queue[0][1] if pending else None\n        if not pending:\n      \
+      \      self._idle_run = 0.0 if self._busy else self._idle_run + dt\n       \
+      \     return\n\n        if self.max_defer_s > 0 and self._t - t_head > self.max_defer_s\
+      \ and self._floor_db is not None:\n            self._st[\"forced\"] += 1\n \
+      \           self._release()\n            return\n\n        if self._backoff\
+      \ is None:                           # new frame at the head: draw its backoff\n\
+      \            self._backoff = int(self._rng.integers(0, self._cw))\n\n      \
+      \  if self._busy:\n            if self._idle_run > 0.0:\n                self._st[\"\
+      deferrals\"] += 1\n            self._idle_run = 0.0                        \
+      \    # countdown frozen; DIFS again after the busy period\n            return\n\
+      \n        # Slot boundaries sit at idle_start + difs + m * slot (m = 0, 1, 2\
+      \ ...). Both nodes see the same burst end,\n        # so their boundaries coincide\
+      \ and only frames released at the SAME boundary can collide.\n        p_prev\
+      \ = self._idle_run - self.difs_s\n        self._idle_run += dt\n        p_now\
+      \ = self._idle_run - self.difs_s\n        if p_now < 0:\n            return\n\
+      \        crossings = int(np.floor(p_now / self.slot_s)) - int(np.floor(p_prev\
+      \ / self.slot_s))\n        for _ in range(crossings):\n            if self._backoff\
+      \ == 0:\n                self._release()\n                return\n         \
+      \   self._backoff -= 1\n\n    # ------------------------------------------------------------------\
+      \ stream\n    def work(self, input_items, output_items):\n        t_cpu = time.perf_counter()\n\
+      \        if self._wall0 is None:\n            self._wall0, self._n_wall0 = time.monotonic(),\
+      \ self._n_abs\n        x = input_items[0]\n        out = output_items[0]\n \
+      \       n = len(x)\n        out[:] = x\n\n        first_abs = self._n_abs -\
+      \ len(self._carry)           # absolute index of buf[0]\n        buf = np.concatenate((self._carry,\
+      \ x)) if len(self._carry) else x\n        nb = len(buf) // self._nfft\n    \
+      \    blank = []                                           # (start, stop) absolute\
+      \ sample ranges\n        if nb:\n            blocks = buf[:nb * self._nfft].reshape(nb,\
+      \ self._nfft) * self._win\n            p = np.abs(np.fft.fft(blocks, axis=1)[:,\
+      \ self._bins]) ** 2\n            med = np.median(p, axis=1) * self._norm\n \
+      \           for i in range(nb):\n                self._smooth.append(float(med[i]))\
+      \                 # sliding mean over sense_s\n                self._cs_db =\
+      \ 10.0 * np.log10(max(sum(self._smooth) / len(self._smooth), 1e-20))\n     \
+      \           self._t = (first_abs + (i + 1) * self._nfft) / self.samp_rate\n\
+      \                was_tx = self._self_tx\n                self._step(self._cs_db)\n\
+      \                if self.blank_rx and (was_tx or self._self_tx):\n         \
+      \           s = first_abs + i * self._nfft\n                    blank.append((s,\
+      \ s + self._nfft))\n                if self._t >= self._floor_next:\n      \
+      \              self._floor_next = self._t + 0.05\n                    self._update_floor()\n\
+      \        self._carry = buf[nb * self._nfft:].copy()\n        self._n_abs +=\
+      \ n\n\n        if self.blank_rx and self._self_tx:                  # samples\
+      \ not yet sensed, but already ours\n            blank.append((self._n_abs -\
+      \ len(self._carry), self._n_abs))\n        x0 = self._n_abs - n\n        for\
+      \ s, e in blank:\n            a, b = max(s, x0) - x0, min(e, self._n_abs) -\
+      \ x0\n            if b > a:\n                out[a:b] = 0\n\n        self._cpu\
+      \ += time.perf_counter() - t_cpu\n        if self.verbose and self.stats_every_s\
+      \ > 0 and self._t - self._stat_t0 >= self.stats_every_s:\n            self._print_stats()\n\
+      \        return n\n\n    def _print_stats(self):\n        span = max(1e-9, self._t\
+      \ - self._stat_t0)\n        ed = list(self._echo_delays)\n        ad = list(self._access_delays)\n\
+      \        echo = (f\"own echo after {1e3 * np.median(ed):.1f} ms (max {1e3 *\
+      \ max(ed):.1f}) -> keep slot_s above it\"\n                if ed else \"own\
+      \ echo not measured yet\")\n        if self.gate_mode == 1:\n            echo\
+      \ += f\" | RX off for {1e3 * self._tx_delay():.1f} ms + airtime + {1e3 * self.gate_guard_s:.1f}\
+      \ ms\"\n        floor = f\"{self._floor_db:.1f}\" if self._floor_db is not None\
+      \ else \"learning\"\n        print(f\"[CSMA] floor {floor} dB, threshold +{self.cs_margin_db:g}\
+      \ dB, now {self._cs_db:.1f} dB, \"\n              f\"busy {100 * self._busy_time\
+      \ / span:.1f} % | tx {self._st['tx']}, deferrals {self._st['deferrals']}, \"\
+      \n              f\"queue {len(self._queue)}, cw {self._cw}, dropped {self._st['dropped']},\
+      \ forced {self._st['forced']}, \"\n              f\"no-echo {self._st['no_echo']}\
+      \ | access delay median \"\n              f\"{(1e3 * np.median(ad)) if ad else\
+      \ 0:.0f} ms | {echo}\", flush=True)\n        wall = max(1e-9, time.monotonic()\
+      \ - self._wall0)\n        rate = (self._n_abs - self._n_wall0) / wall\n    \
+      \    share = 100.0 * rate / self.samp_rate\n        print(f\"[CSMA] radio delivers\
+      \ {rate / 1e6:.4f} Msps = {share:.1f} % of samp_rate | this block uses \"\n\
+      \              f\"{100.0 * self._cpu / wall:.0f} % of one CPU core\", flush=True)\n\
+      \        self._windows += 1\n        if self._windows >= 2 and share < 99.0:\n\
+      \            print(f\"[CSMA] WARNING: only {share:.1f} % of the samples arrive.\
+      \ The PC is not keeping up and the radio \"\n                  f\"drops samples,\
+      \ which breaks frames (train word found, CRC fails). Close GUI sinks you do\
+      \ not \"\n                  f\"need, run without the GUI, or lower samp_rate.\"\
+      , flush=True)\n        self._wall0, self._n_wall0, self._cpu = time.monotonic(),\
+      \ self._n_abs, 0.0\n        self._stat_t0 = self._t\n        self._busy_time\
+      \ = 0.0\n"
+    affinity: ''
+    alias: ''
+    auto_delay: '1'
+    blank_rx: '1'
+    comment: 'CSMA/CA. RX off (zeroed) from each release until release + tx_delay
+      + airtime + guard. Stats every 10 s: [CSMA] lines, incl. samples/s really received
+      and CPU use.'
+    cs_bw_hz: 400e3
+    cs_hyst_db: '2.0'
+    cs_margin_db: cs_margin
+    cw_max: '128'
+    cw_min: '8'
+    dc_exclude_hz: 10e3
+    difs_s: '0.020'
+    echo_timeout_s: '0.100'
+    floor_percentile: '10.0'
+    floor_rise_db_s: '1.0'
+    floor_window_s: '2.0'
+    gate_guard_s: '0.005'
+    gate_mode: '1'
+    max_defer_s: '0.0'
+    max_queue: '64'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    nfft: '256'
+    samp_rate: samp_rate
+    samples_per_byte: 8*sps
+    sense_s: '0.001'
+    slot_s: '0.015'
+    stats_every_s: '10.0'
+    tail_s: '0.002'
+    tx_delay_s: '0.009'
+    verbose: '1'
+  states:
+    _io_cache: ('CSMA/CA MAC', 'CsmaMac', [('samp_rate', '1500000.0'), ('samples_per_byte',
+      '32'), ('slot_s', '0.015'), ('difs_s', '0.02'), ('cw_min', '8'), ('cw_max',
+      '128'), ('cs_margin_db', '6.0'), ('cs_hyst_db', '2.0'), ('cs_bw_hz', '400000.0'),
+      ('dc_exclude_hz', '10000.0'), ('nfft', '256'), ('sense_s', '0.001'), ('floor_window_s',
+      '2.0'), ('floor_percentile', '10.0'), ('floor_rise_db_s', '1.0'), ('echo_timeout_s',
+      '0.1'), ('tail_s', '0.002'), ('blank_rx', '1'), ('max_queue', '64'), ('max_defer_s',
+      '0.0'), ('verbose', '1'), ('stats_every_s', '10.0'), ('gate_mode', '1'), ('tx_delay_s',
+      '0.009'), ('auto_delay', '1'), ('gate_guard_s', '0.002')], [('0', 'complex',
+      1), ('pdu_in', 'message', 1), ('ctrl', 'message', 1)], [('0', 'complex', 1),
+      ('pdu_out', 'message', 1)], '', ['auto_delay', 'blank_rx', 'cs_hyst_db', 'cs_margin_db',
+      'cw_max', 'cw_min', 'difs_s', 'echo_timeout_s', 'floor_percentile', 'floor_rise_db_s',
+      'gate_guard_s', 'gate_mode', 'max_defer_s', 'max_queue', 'samp_rate', 'samples_per_byte',
+      'slot_s', 'stats_every_s', 'tail_s', 'tx_delay_s', 'verbose'])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [300, 560]
+    rotation: 0
+    state: enabled
+- name: epy_noise
+  id: epy_block
+  parameters:
+    _source_code: "\"\"\"\nEmbedded Python Block: Noise-floor tracker -> automatic\
+      \ squelch threshold\n- Sink block: connect it to the SDR source output (BEFORE\
+      \ any squelch/AGC).\n- Splits the stream into short slices (default ~1 ms),\
+      \ keeps the mean power of each slice for the\n  last `window_s` seconds, and\
+      \ takes a low percentile of them as the noise floor (bursts only occupy\n  the\
+      \ top of the distribution, so they are ignored as long as the channel is idle\
+      \ > `percentile` % of the time).\n- level() returns the squelch threshold in\
+      \ dB:  noise floor (dB) + margin_db, clamped to\n  [thr_min, thr_max]. The estimate\
+      \ falls immediately but rises at most `rise_db_s` dB per second, so a\n  long\
+      \ burst or a back-to-back transmission cannot drag the threshold up and close\
+      \ the squelch.\n- Use with a \"Function Probe\" variable named power_threshold:\
+      \  block id = this block, function = level,\n  poll rate ~ 5 Hz. The Pluto/squelch\
+      \ power unit is the same: dB of mean |x|^2.\n\"\"\"\nimport threading\nimport\
+      \ time\nfrom collections import deque\n\nimport numpy as np\nfrom gnuradio import\
+      \ gr\n\n\nclass NoiseFloor(gr.sync_block):\n    def __init__(self, samp_rate=1.5e6,\
+      \ margin_db=6.0, window_s=1.0, percentile=10.0,\n                 rise_db_s=1.0,\
+      \ thr_min=-100.0, thr_max=-20.0, init_db=-40.0, verbose=1):\n        gr.sync_block.__init__(self,\
+      \ name=\"Noise Floor Tracker\", in_sig=[np.complex64], out_sig=None)\n     \
+      \   self.samp_rate = float(samp_rate)\n        self.margin_db = float(margin_db)\n\
+      \        self.window_s = float(window_s)\n        self.percentile = float(percentile)\n\
+      \        self.rise_db_s = float(rise_db_s)\n        self.thr_min = float(thr_min)\n\
+      \        self.thr_max = float(thr_max)\n        self.init_db = float(init_db)\n\
+      \        self.verbose = int(verbose)\n\n        self._slice = max(64, int(self.samp_rate\
+      \ * 1e-3))            # ~1 ms\n        n_slices = max(16, int(self.window_s\
+      \ * self.samp_rate / self._slice))\n        self._ring = deque(maxlen=n_slices)\n\
+      \        self._min_slices = max(8, n_slices // 4)                       # wait\
+      \ for 1/4 window before trusting\n        self._carry = np.zeros(0, np.float32)\n\
+      \        self._lock = threading.Lock()\n        self._est_db = None\n      \
+      \  self._t_last = None\n        self._out = self.init_db\n        self._printed\
+      \ = None\n\n    def work(self, input_items, output_items):\n        x = input_items[0]\n\
+      \        n = len(x)\n        if n == 0:\n            return 0\n        p = x.real.astype(np.float32)\
+      \ ** 2 + x.imag.astype(np.float32) ** 2\n        if self._carry.size:\n    \
+      \        p = np.concatenate((self._carry, p))\n        k = len(p) // self._slice\n\
+      \        if k:\n            means = p[: k * self._slice].reshape(k, self._slice).mean(axis=1,\
+      \ dtype=np.float64)\n            with self._lock:\n                self._ring.extend(means)\n\
+      \        self._carry = p[k * self._slice:]\n        return n\n\n    def noise_db(self):\n\
+      \        return self._est_db\n\n    def level(self):\n        \"\"\"Called by\
+      \ the Function Probe variable: returns the squelch threshold in dB.\"\"\"\n\
+      \        with self._lock:\n            arr = np.fromiter(self._ring, dtype=np.float64,\
+      \ count=len(self._ring))\n        if arr.size < self._min_slices:\n        \
+      \    return self._out\n        raw_db = 10.0 * np.log10(max(float(np.percentile(arr,\
+      \ self.percentile)), 1e-20))\n        now = time.monotonic()\n        if self._est_db\
+      \ is None:\n            self._est_db = raw_db\n        else:\n            dt\
+      \ = max(0.0, now - self._t_last)\n            if raw_db <= self._est_db:\n \
+      \               self._est_db = raw_db\n            else:\n                self._est_db\
+      \ = min(raw_db, self._est_db + self.rise_db_s * dt)\n        self._t_last =\
+      \ now\n        self._out = float(min(self.thr_max, max(self.thr_min, self._est_db\
+      \ + self.margin_db)))\n        if self.verbose and (self._printed is None or\
+      \ abs(self._out - self._printed) >= 1.0):\n            print(f\"[SQL] noise\
+      \ floor {self._est_db:.1f} dB -> squelch threshold {self._out:.1f} dB\", flush=True)\n\
+      \            self._printed = self._out\n        return self._out\n"
+    affinity: ''
+    alias: ''
+    comment: ''
+    init_db: '-40.0'
+    margin_db: margin_db
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    percentile: '10.0'
+    rise_db_s: '1.0'
+    samp_rate: samp_rate
+    thr_max: '-20.0'
+    thr_min: '-100.0'
+    verbose: '1'
+    window_s: '1.0'
+  states:
+    _io_cache: ('Noise Floor Tracker', 'NoiseFloor', [('samp_rate', '1500000.0'),
+      ('margin_db', '6.0'), ('window_s', '1.0'), ('percentile', '10.0'), ('rise_db_s',
+      '1.0'), ('thr_min', '-100.0'), ('thr_max', '-20.0'), ('init_db', '-40.0'), ('verbose',
+      '1')], [('0', 'complex', 1)], [], '', ['init_db', 'margin_db', 'percentile',
+      'rise_db_s', 'samp_rate', 'thr_max', 'thr_min', 'verbose', 'window_s'])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [464, 1156.0]
+    rotation: 0
+    state: enabled
+- name: iio_pluto_sink_0_0
+  id: iio_pluto_sink
+  parameters:
+    affinity: ''
+    alias: ''
+    attenuation1: CH_GAIN
+    bandwidth: FILTER_BW
+    buffer_size: BUFFER_SIZE
+    comment: ''
+    cyclic: 'False'
+    filter: ''
+    filter_source: '''Auto'''
+    fpass: '0'
+    frequency: TX_FREQ
+    fstop: '0'
+    len_tag_key: ''
+    samplerate: int(samp_rate)
+    type: fc32
+    uri: ADDR
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1504, 308.0]
+    rotation: 0
+    state: enabled
+- name: iio_pluto_source_0
+  id: iio_pluto_source
+  parameters:
+    affinity: ''
+    alias: ''
+    bandwidth: FILTER_BW
+    bbdc: 'True'
+    buffer_size: BUFFER_SIZE_RX
+    comment: ''
+    filter: ''
+    filter_source: '''Auto'''
+    fpass: '0'
+    frequency: RX_FREQ
+    fstop: '0'
+    gain1: '''manual'''
+    len_tag_key: '''packet_len'''
+    manual_gain1: '64'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    quadrature: 'True'
+    rfdc: 'True'
+    samplerate: int(samp_rate)
+    type: fc32
+    uri: ADDR
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [24, 796.0]
+    rotation: 0
+    state: enabled
+- name: import_0
+  id: import
+  parameters:
+    alias: ''
+    comment: ''
+    imports: 'import numpy as np
+
+      import os'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [968, 16.0]
+    rotation: 0
+    state: enabled
+- name: note_0
+  id: note
+  parameters:
+    alias: ''
+    comment: ''
+    note: 'v6.3 multi-node: IDs from env CDP_MY_ID (unique, 0..254) and CDP_DEST (default
+      255 = all). Frame header carries dst + src. CSMA gate_guard 5 ms. Not compatible
+      with v6.2 frames.'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [824, 120.0]
+    rotation: 0
+    state: enabled
+- name: note_1
+  id: note
+  parameters:
+    alias: ''
+    comment: ''
+    note: To observe signal power
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1352, 1092.0]
+    rotation: 0
+    state: enabled
+- name: pdu_pdu_to_tagged_stream_0_0
+  id: pdu_pdu_to_tagged_stream
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    tag: packet_len
+    type: byte
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [776, 1604.0]
+    rotation: 0
+    state: enabled
+- name: qtgui_const_sink_x_0
+  id: qtgui_const_sink_x
+  parameters:
+    affinity: ''
+    alias: ''
+    alpha1: '1.0'
+    alpha10: '1.0'
+    alpha2: '1.0'
+    alpha3: '1.0'
+    alpha4: '1.0'
+    alpha5: '1.0'
+    alpha6: '1.0'
+    alpha7: '1.0'
+    alpha8: '1.0'
+    alpha9: '1.0'
+    autoscale: 'False'
+    axislabels: 'True'
+    color1: '"blue"'
+    color10: '"dark blue"'
+    color2: '"red"'
+    color3: '"green"'
+    color4: '"black"'
+    color5: '"cyan"'
+    color6: '"magenta"'
+    color7: '"yellow"'
+    color8: '"dark red"'
+    color9: '"dark green"'
+    comment: ''
+    grid: 'False'
+    gui_hint: ''
+    label1: ''
+    label10: ''
+    label2: ''
+    label3: ''
+    label4: ''
+    label5: ''
+    label6: ''
+    label7: ''
+    label8: ''
+    label9: ''
+    legend: 'True'
+    marker1: '0'
+    marker10: '0'
+    marker2: '0'
+    marker3: '0'
+    marker4: '0'
+    marker5: '0'
+    marker6: '0'
+    marker7: '0'
+    marker8: '0'
+    marker9: '0'
+    name: '""'
+    nconnections: '1'
+    size: '1024'
+    style1: '0'
+    style10: '0'
+    style2: '0'
+    style3: '0'
+    style4: '0'
+    style5: '0'
+    style6: '0'
+    style7: '0'
+    style8: '0'
+    style9: '0'
+    tr_chan: '0'
+    tr_level: '0.0'
+    tr_mode: qtgui.TRIG_MODE_FREE
+    tr_slope: qtgui.TRIG_SLOPE_POS
+    tr_tag: '""'
+    type: complex
+    update_time: '0.10'
+    width1: '1'
+    width10: '1'
+    width2: '1'
+    width3: '1'
+    width4: '1'
+    width5: '1'
+    width6: '1'
+    width7: '1'
+    width8: '1'
+    width9: '1'
+    xmax: '2'
+    xmin: '-2'
+    ymax: '2'
+    ymin: '-2'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [768, 1248.0]
+    rotation: 0
+    state: enabled
+- name: qtgui_const_sink_x_1
+  id: qtgui_const_sink_x
+  parameters:
+    affinity: ''
+    alias: ''
+    alpha1: '1.0'
+    alpha10: '1.0'
+    alpha2: '1.0'
+    alpha3: '1.0'
+    alpha4: '1.0'
+    alpha5: '1.0'
+    alpha6: '1.0'
+    alpha7: '1.0'
+    alpha8: '1.0'
+    alpha9: '1.0'
+    autoscale: 'False'
+    axislabels: 'True'
+    color1: '"blue"'
+    color10: '"dark blue"'
+    color2: '"red"'
+    color3: '"green"'
+    color4: '"black"'
+    color5: '"cyan"'
+    color6: '"magenta"'
+    color7: '"yellow"'
+    color8: '"dark red"'
+    color9: '"dark green"'
+    comment: ''
+    grid: 'False'
+    gui_hint: ''
+    label1: ''
+    label10: ''
+    label2: ''
+    label3: ''
+    label4: ''
+    label5: ''
+    label6: ''
+    label7: ''
+    label8: ''
+    label9: ''
+    legend: 'True'
+    marker1: '0'
+    marker10: '0'
+    marker2: '0'
+    marker3: '0'
+    marker4: '0'
+    marker5: '0'
+    marker6: '0'
+    marker7: '0'
+    marker8: '0'
+    marker9: '0'
+    name: '""'
+    nconnections: '1'
+    size: '1024'
+    style1: '0'
+    style10: '0'
+    style2: '0'
+    style3: '0'
+    style4: '0'
+    style5: '0'
+    style6: '0'
+    style7: '0'
+    style8: '0'
+    style9: '0'
+    tr_chan: '0'
+    tr_level: '0.0'
+    tr_mode: qtgui.TRIG_MODE_FREE
+    tr_slope: qtgui.TRIG_SLOPE_POS
+    tr_tag: '""'
+    type: complex
+    update_time: '0.10'
+    width1: '1'
+    width10: '1'
+    width2: '1'
+    width3: '1'
+    width4: '1'
+    width5: '1'
+    width6: '1'
+    width7: '1'
+    width8: '1'
+    width9: '1'
+    xmax: '2'
+    xmin: '-2'
+    ymax: '2'
+    ymin: '-2'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [2904, 600.0]
+    rotation: 0
+    state: enabled
+- name: qtgui_edit_box_msg_0_0
+  id: qtgui_edit_box_msg
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    gui_hint: ''
+    is_pair: 'False'
+    is_static: 'False'
+    key: ''
+    label: '"TX Message (@2 text = only node 2, @all text = everyone)"'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    type: string
+    value: '"MESSAGE"'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1232, 1764.0]
+    rotation: 180
+    state: enabled
+- name: qtgui_freq_sink_x_0
+  id: qtgui_freq_sink_x
+  parameters:
+    affinity: ''
+    alias: ''
+    alpha1: '1.0'
+    alpha10: '1.0'
+    alpha2: '1.0'
+    alpha3: '1.0'
+    alpha4: '1.0'
+    alpha5: '1.0'
+    alpha6: '1.0'
+    alpha7: '1.0'
+    alpha8: '1.0'
+    alpha9: '1.0'
+    autoscale: 'False'
+    average: '1.0'
+    axislabels: 'True'
+    bw: samp_rate
+    color1: '"blue"'
+    color10: '"dark blue"'
+    color2: '"red"'
+    color3: '"green"'
+    color4: '"black"'
+    color5: '"cyan"'
+    color6: '"magenta"'
+    color7: '"yellow"'
+    color8: '"dark red"'
+    color9: '"dark green"'
+    comment: ''
+    ctrlpanel: 'False'
+    fc: '0'
+    fftsize: '2048'
+    freqhalf: 'True'
+    grid: 'False'
+    gui_hint: ''
+    label: Relative Gain
+    label1: ''
+    label10: ''''''
+    label2: ''''''
+    label3: ''''''
+    label4: ''''''
+    label5: ''''''
+    label6: ''''''
+    label7: ''''''
+    label8: ''''''
+    label9: ''''''
+    legend: 'True'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    name: '""'
+    nconnections: '1'
+    norm_window: 'False'
+    showports: 'False'
+    tr_chan: '0'
+    tr_level: '0.0'
+    tr_mode: qtgui.TRIG_MODE_FREE
+    tr_tag: '""'
+    type: complex
+    units: dB
+    update_time: '0.10'
+    width1: '1'
+    width10: '1'
+    width2: '1'
+    width3: '1'
+    width4: '1'
+    width5: '1'
+    width6: '1'
+    width7: '1'
+    width8: '1'
+    width9: '1'
+    wintype: window.WIN_BLACKMAN_hARRIS
+    ymax: '10'
+    ymin: '-140'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1888, 1192.0]
+    rotation: 0
+    state: disabled
+- name: qtgui_freq_sink_x_1
+  id: qtgui_freq_sink_x
+  parameters:
+    affinity: ''
+    alias: ''
+    alpha1: '1.0'
+    alpha10: '1.0'
+    alpha2: '1.0'
+    alpha3: '1.0'
+    alpha4: '1.0'
+    alpha5: '1.0'
+    alpha6: '1.0'
+    alpha7: '1.0'
+    alpha8: '1.0'
+    alpha9: '1.0'
+    autoscale: 'False'
+    average: '1.0'
+    axislabels: 'True'
+    bw: samp_rate
+    color1: '"blue"'
+    color10: '"dark blue"'
+    color2: '"red"'
+    color3: '"green"'
+    color4: '"black"'
+    color5: '"cyan"'
+    color6: '"magenta"'
+    color7: '"yellow"'
+    color8: '"dark red"'
+    color9: '"dark green"'
+    comment: ''
+    ctrlpanel: 'False'
+    fc: '0'
+    fftsize: '1024'
+    freqhalf: 'True'
+    grid: 'False'
+    gui_hint: ''
+    label: Relative Gain
+    label1: ''
+    label10: ''''''
+    label2: ''''''
+    label3: ''''''
+    label4: ''''''
+    label5: ''''''
+    label6: ''''''
+    label7: ''''''
+    label8: ''''''
+    label9: ''''''
+    legend: 'True'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    name: '""'
+    nconnections: '1'
+    norm_window: 'False'
+    showports: 'False'
+    tr_chan: '0'
+    tr_level: '0.0'
+    tr_mode: qtgui.TRIG_MODE_FREE
+    tr_tag: '""'
+    type: complex
+    units: dB
+    update_time: '0.10'
+    width1: '1'
+    width10: '1'
+    width2: '1'
+    width3: '1'
+    width4: '1'
+    width5: '1'
+    width6: '1'
+    width7: '1'
+    width8: '1'
+    width9: '1'
+    wintype: window.WIN_BLACKMAN_hARRIS
+    ymax: '10'
+    ymin: '-140'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [2896, 688.0]
+    rotation: 0
+    state: disabled
+- name: qtgui_time_sink_x_0
+  id: qtgui_time_sink_x
+  parameters:
+    affinity: ''
+    alias: ''
+    alpha1: '1.0'
+    alpha10: '1.0'
+    alpha2: '1.0'
+    alpha3: '1.0'
+    alpha4: '1.0'
+    alpha5: '1.0'
+    alpha6: '1.0'
+    alpha7: '1.0'
+    alpha8: '1.0'
+    alpha9: '1.0'
+    autoscale: 'False'
+    axislabels: 'True'
+    color1: blue
+    color10: dark blue
+    color2: red
+    color3: green
+    color4: black
+    color5: cyan
+    color6: magenta
+    color7: yellow
+    color8: dark red
+    color9: dark green
+    comment: ''
+    ctrlpanel: 'False'
+    entags: 'True'
+    grid: 'False'
+    gui_hint: ''
+    label1: Signal 1
+    label10: Signal 10
+    label2: Signal 2
+    label3: Signal 3
+    label4: Signal 4
+    label5: Signal 5
+    label6: Signal 6
+    label7: Signal 7
+    label8: Signal 8
+    label9: Signal 9
+    legend: 'True'
+    marker1: '-1'
+    marker10: '-1'
+    marker2: '-1'
+    marker3: '-1'
+    marker4: '-1'
+    marker5: '-1'
+    marker6: '-1'
+    marker7: '-1'
+    marker8: '-1'
+    marker9: '-1'
+    name: '""'
+    nconnections: '1'
+    size: '1024'
+    srate: samp_rate
+    stemplot: 'False'
+    style1: '1'
+    style10: '1'
+    style2: '1'
+    style3: '1'
+    style4: '1'
+    style5: '1'
+    style6: '1'
+    style7: '1'
+    style8: '1'
+    style9: '1'
+    tr_chan: '0'
+    tr_delay: '0'
+    tr_level: '0.0'
+    tr_mode: qtgui.TRIG_MODE_FREE
+    tr_slope: qtgui.TRIG_SLOPE_POS
+    tr_tag: '""'
+    type: float
+    update_time: '0.10'
+    width1: '1'
+    width10: '1'
+    width2: '1'
+    width3: '1'
+    width4: '1'
+    width5: '1'
+    width6: '1'
+    width7: '1'
+    width8: '1'
+    width9: '1'
+    ylabel: Amplitude
+    ymax: '0'
+    ymin: '-55'
+    yunit: '""'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1144, 1056.0]
+    rotation: 0
+    state: disabled
+- name: root_raised_cosine_filter_0
+  id: root_raised_cosine_filter
+  parameters:
+    affinity: ''
+    alias: ''
+    alpha: alpha
+    comment: ''
+    decim: '1'
+    gain: '1'
+    interp: '1'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    ntaps: 11*sps+1
+    samp_rate: samp_rate
+    sym_rate: samp_rate/float(sps)
+    type: fir_filter_ccf
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1464, 840.0]
+    rotation: 0
+    state: enabled
+- name: single_pole_iir_filter_xx_0
+  id: single_pole_iir_filter_xx
+  parameters:
+    affinity: ''
+    alias: ''
+    alpha: '0.01'
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    type: float
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [744, 1076.0]
+    rotation: 0
+    state: disabled
+- name: soapy_rtlsdr_source_0
+  id: soapy_rtlsdr_source
+  parameters:
+    affinity: ''
+    agc: 'False'
+    alias: ''
+    bias: 'False'
+    bufflen: '4096'
+    center_freq: SDR_CF
+    comment: ''
+    dev_args: ''
+    freq_correction: '0'
+    gain: CH_GAIN
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    samp_rate: samp_rate
+    type: fc32
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [200, 1044.0]
+    rotation: 0
+    state: disabled
+- name: virtual_sink_0_1
+  id: virtual_sink
+  parameters:
+    alias: ''
+    comment: ''
+    stream_id: packet_tx
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1208, 1604.0]
+    rotation: 0
+    state: enabled
+- name: virtual_sink_2
+  id: virtual_sink
+  parameters:
+    alias: ''
+    comment: ''
+    stream_id: decoded_stream
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1616, 1360.0]
+    rotation: 0
+    state: disabled
+- name: virtual_sink_2_0
+  id: virtual_sink
+  parameters:
+    alias: ''
+    comment: ''
+    stream_id: decoded_stream
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1608, 1440.0]
+    rotation: 0
+    state: enabled
+- name: virtual_sink_3
+  id: virtual_sink
+  parameters:
+    alias: ''
+    comment: ''
+    stream_id: decoded_constallation
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [2896, 776.0]
+    rotation: 0
+    state: enabled
+- name: virtual_sink_5_0
+  id: virtual_sink
+  parameters:
+    alias: ''
+    comment: ''
+    stream_id: freq
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1544, 584.0]
+    rotation: 0
+    state: enabled
+- name: virtual_source_0
+  id: virtual_source
+  parameters:
+    alias: ''
+    comment: ''
+    stream_id: ''
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [8, 2608.0]
+    rotation: 0
+    state: disabled
+- name: virtual_source_0_0_0
+  id: virtual_source
+  parameters:
+    alias: ''
+    comment: ''
+    stream_id: packet_tx
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [336, 492.0]
+    rotation: 0
+    state: enabled
+- name: virtual_source_2
+  id: virtual_source
+  parameters:
+    alias: ''
+    comment: ''
+    stream_id: decoded_constallation
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [448, 1360.0]
+    rotation: 0
+    state: enabled
+- name: virtual_source_2_0
+  id: virtual_source
+  parameters:
+    alias: ''
+    comment: ''
+    stream_id: decoded_stream
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [408, 1616.0]
+    rotation: 0
+    state: enabled
+- name: virtual_source_4
+  id: virtual_source
+  parameters:
+    alias: ''
+    comment: ''
+    stream_id: freq
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1704, 1208.0]
+    rotation: 0
+    state: disabled
+
+connections:
+- [analog_agc_xx_0, '0', analog_pwr_squelch_xx_0, '0']
+- [analog_agc_xx_0, '0', blocks_copy_1, '0']
+- [analog_agc_xx_0, '0', blocks_copy_1_0_0, '0']
+- [analog_pwr_squelch_xx_0, '0', digital_fll_band_edge_cc_0, '0']
+- [analog_pwr_squelch_xx_0_0, '0', analog_agc_xx_0, '0']
+- [blocks_complex_to_mag_squared_0, '0', single_pole_iir_filter_xx_0, '0']
+- [blocks_copy_0_0, '0', digital_constellation_modulator_0_0_0, '0']
+- [blocks_copy_0_0, '0', digital_constellation_modulator_0_1, '0']
+- [blocks_copy_1, '0', root_raised_cosine_filter_0, '0']
+- [blocks_copy_1_0, '0', blocks_copy_1, '0']
+- [blocks_copy_1_0, '0', digital_fll_band_edge_cc_0, '0']
+- [blocks_copy_1_0_0, '0', digital_fll_band_edge_cc_0, '0']
+- [blocks_copy_1_1, '0', analog_agc_xx_0, '0']
+- [blocks_copy_1_1, '0', blocks_copy_1_0, '0']
+- [blocks_copy_1_2, '0', root_raised_cosine_filter_0, '0']
+- [blocks_copy_2, '0', digital_costas_loop_cc_0, '0']
+- [blocks_nlog10_ff_0, '0', qtgui_time_sink_x_0, '0']
+- [blocks_skiphead_0, '0', root_raised_cosine_filter_0, '0']
+- [blocks_tag_gate_0_0, '0', iio_pluto_sink_0_0, '0']
+- [blocks_tag_gate_0_0, '0', virtual_sink_5_0, '0']
+- [blocks_tagged_stream_multiply_length_0, '0', iio_pluto_sink_0_0, '0']
+- [blocks_tagged_stream_multiply_length_0, '0', virtual_sink_5_0, '0']
+- [blocks_unpack_k_bits_bb_0, '0', virtual_sink_2, '0']
+- [blocks_unpack_k_bits_bb_0_0, '0', virtual_sink_2_0, '0']
+- [dc_blocker_xx_0, '0', blocks_complex_to_mag_squared_0, '0']
+- [dc_blocker_xx_0, '0', blocks_copy_1_1, '0']
+- [dc_blocker_xx_0, '0', epy_csma, '0']
+- [dc_blocker_xx_0, '0', epy_noise, '0']
+- [digital_constellation_decoder_cb_0, '0', digital_diff_decoder_bb_0, '0']
+- [digital_constellation_decoder_cb_0_0, '0', digital_diff_decoder_bb_0_0, '0']
+- [digital_constellation_modulator_0_0_0, '0', blocks_tag_gate_0_0, '0']
+- [digital_constellation_modulator_0_0_0, '0', blocks_tagged_stream_multiply_length_0,
+  '0']
+- [digital_constellation_modulator_0_1, '0', blocks_tag_gate_0_0, '0']
+- [digital_costas_loop_cc_0, '0', qtgui_const_sink_x_1, '0']
+- [digital_costas_loop_cc_0, '0', qtgui_freq_sink_x_1, '0']
+- [digital_costas_loop_cc_0, '0', virtual_sink_3, '0']
+- [digital_diff_decoder_bb_0, '0', digital_map_bb_0, '0']
+- [digital_diff_decoder_bb_0_0, '0', blocks_unpack_k_bits_bb_0_0, '0']
+- [digital_fll_band_edge_cc_0, '0', blocks_copy_1_2, '0']
+- [digital_fll_band_edge_cc_0, '0', blocks_skiphead_0, '0']
+- [digital_linear_equalizer_0, '0', digital_costas_loop_cc_0, '0']
+- [digital_map_bb_0, '0', blocks_unpack_k_bits_bb_0, '0']
+- [digital_symbol_sync_xx_0, '0', blocks_copy_2, '0']
+- [digital_symbol_sync_xx_0, '0', epy_block_corr, '0']
+- [epy_block_0, msg_out, epy_block_0_0_1, msg_in]
+- [epy_block_0_0, pdu_out, pdu_pdu_to_tagged_stream_0_0, pdus]
+- [epy_block_0_0_0, pdu_out, epy_block_1, pdu_in]
+- [epy_block_0_0_1, pdu_out, epy_csma, pdu_in]
+- [epy_block_corr, '0', blocks_tag_debug_corr, '0']
+- [epy_block_corr, '0', digital_linear_equalizer_0, '0']
+- [epy_csma, '0', analog_pwr_squelch_xx_0_0, '0']
+- [epy_csma, pdu_out, pdu_pdu_to_tagged_stream_0_0, pdus]
+- [iio_pluto_source_0, '0', dc_blocker_xx_0, '0']
+- [pdu_pdu_to_tagged_stream_0_0, '0', blocks_tag_debug_0, '0']
+- [pdu_pdu_to_tagged_stream_0_0, '0', virtual_sink_0_1, '0']
+- [qtgui_edit_box_msg_0_0, msg, epy_block_0_0, msg_in]
+- [qtgui_edit_box_msg_0_0, msg, epy_block_0_0_1, msg_in]
+- [root_raised_cosine_filter_0, '0', digital_symbol_sync_xx_0, '0']
+- [single_pole_iir_filter_xx_0, '0', blocks_nlog10_ff_0, '0']
+- [soapy_rtlsdr_source_0, '0', blocks_copy_1_1, '0']
+- [virtual_source_0_0_0, '0', blocks_copy_0_0, '0']
+- [virtual_source_2, '0', digital_constellation_decoder_cb_0, '0']
+- [virtual_source_2, '0', digital_constellation_decoder_cb_0_0, '0']
+- [virtual_source_2, '0', qtgui_const_sink_x_0, '0']
+- [virtual_source_2_0, '0', epy_block_0_0_0, '0']
+- [virtual_source_4, '0', qtgui_freq_sink_x_0, '0']
+
+metadata:
+  file_format: 1
+  grc_version: 3.10.12.0

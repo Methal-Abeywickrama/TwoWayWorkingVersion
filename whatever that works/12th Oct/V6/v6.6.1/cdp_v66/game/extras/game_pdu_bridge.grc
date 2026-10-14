@@ -1,0 +1,198 @@
+options:
+  parameters:
+    author: ''
+    catch_exceptions: 'True'
+    category: '[GRC Hier Blocks]'
+    cmake_opt: ''
+    comment: ''
+    copyright: ''
+    description: Bridges two copies of fps_game.py through a simulated lossy link. Replace each chan_* block with your TX->air->RX chain.
+    gen_cmake: 'On'
+    gen_linking: dynamic
+    generate_options: no_gui
+    hier_block_src_path: '.:'
+    id: game_pdu_bridge
+    max_nouts: '0'
+    output_language: python
+    placement: (0,0)
+    qt_qss_theme: ''
+    realtime_scheduling: ''
+    run: 'True'
+    run_command: '{python} -u {filename}'
+    run_options: run
+    sizing_mode: fixed
+    thread_safe_setters: ''
+    title: Game PDU bridge (no radio)
+    window_size: (1000,1000)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [8, 8]
+    rotation: 0
+    state: enabled
+blocks:
+- name: drop_prob
+  id: variable
+  parameters:
+    comment: ''
+    value: '0.1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [200, 12]
+    rotation: 0
+    state: enabled
+- name: corrupt_prob
+  id: variable
+  parameters:
+    comment: ''
+    value: '0.0'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [344, 12]
+    rotation: 0
+    state: enabled
+- name: delay_ms
+  id: variable
+  parameters:
+    comment: ''
+    value: '20'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [504, 12]
+    rotation: 0
+    state: enabled
+- name: game0_tx
+  id: network_socket_pdu
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: game --id 0 sends here
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    host: ''
+    mtu: '10000'
+    port: '52001'
+    tcp_no_delay: 'False'
+    type: UDP_SERVER
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [16, 140]
+    rotation: 0
+    state: enabled
+- name: chan_0to1
+  id: epy_block
+  parameters:
+    _source_code: "\"\"\"\nEmbedded Python Block: Lossy PDU Channel (testing only)\n\nStands in for the radio in game_pdu_bridge.grc: drops PDUs with probability drop_prob,\nflips one random bit with probability corrupt_prob, and can add a fixed delay.\nLets you see how the game behaves with a bad link before using the ANTSDRs.\n\"\"\"\nimport random\nimport threading\n\nimport pmt\nfrom gnuradio import gr\n\n\nclass blk(gr.basic_block):\n    \"\"\"Lossy PDU Channel - drop / corrupt / delay PDUs to mimic a radio link.\"\"\"\n\n    def __init__(self, drop_prob=0.0, corrupt_prob=0.0, delay_ms=0.0, seed=0):\n        gr.basic_block.__init__(self, name=\"Lossy PDU Channel\", in_sig=None, out_sig=None)\n        self.drop_prob = drop_prob\n        self.corrupt_prob = corrupt_prob\n        self.delay_ms = delay_ms\n        self.rng = random.Random(seed if seed else None)\n        self.message_port_register_in(pmt.intern(\"in\"))\n        self.message_port_register_out(pmt.intern(\"out\"))\n        self.set_msg_handler(pmt.intern(\"in\"), self.handle)\n\n    def handle(self, msg):\n        if self.rng.random() < self.drop_prob:\n            return\n        if self.rng.random() < self.corrupt_prob and pmt.is_pair(msg):\n            data = list(pmt.u8vector_elements(pmt.cdr(msg)))\n            if data:\n                i = self.rng.randrange(len(data))\n                data[i] ^= 1 << self.rng.randrange(8)\n                msg = pmt.cons(pmt.car(msg), pmt.init_u8vector(len(data), data))\n        if self.delay_ms > 0:\n            threading.Timer(self.delay_ms / 1000.0, self.message_port_pub,\n                            (pmt.intern(\"out\"), msg)).start()\n        else:\n            self.message_port_pub(pmt.intern(\"out\"), msg)\n"
+    affinity: ''
+    alias: ''
+    comment: 'stands in for: your TX chain -> air -> RX chain'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    corrupt_prob: corrupt_prob
+    delay_ms: delay_ms
+    drop_prob: drop_prob
+    seed: '0'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [320, 140]
+    rotation: 0
+    state: enabled
+- name: game1_rx
+  id: network_socket_pdu
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: game --id 1 listens here
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    host: 127.0.0.1
+    mtu: '10000'
+    port: '52012'
+    tcp_no_delay: 'False'
+    type: UDP_CLIENT
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [624, 140]
+    rotation: 0
+    state: enabled
+- name: game1_tx
+  id: network_socket_pdu
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: game --id 1 sends here
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    host: ''
+    mtu: '10000'
+    port: '52011'
+    tcp_no_delay: 'False'
+    type: UDP_SERVER
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [16, 340]
+    rotation: 0
+    state: enabled
+- name: chan_1to0
+  id: epy_block
+  parameters:
+    _source_code: "\"\"\"\nEmbedded Python Block: Lossy PDU Channel (testing only)\n\nStands in for the radio in game_pdu_bridge.grc: drops PDUs with probability drop_prob,\nflips one random bit with probability corrupt_prob, and can add a fixed delay.\nLets you see how the game behaves with a bad link before using the ANTSDRs.\n\"\"\"\nimport random\nimport threading\n\nimport pmt\nfrom gnuradio import gr\n\n\nclass blk(gr.basic_block):\n    \"\"\"Lossy PDU Channel - drop / corrupt / delay PDUs to mimic a radio link.\"\"\"\n\n    def __init__(self, drop_prob=0.0, corrupt_prob=0.0, delay_ms=0.0, seed=0):\n        gr.basic_block.__init__(self, name=\"Lossy PDU Channel\", in_sig=None, out_sig=None)\n        self.drop_prob = drop_prob\n        self.corrupt_prob = corrupt_prob\n        self.delay_ms = delay_ms\n        self.rng = random.Random(seed if seed else None)\n        self.message_port_register_in(pmt.intern(\"in\"))\n        self.message_port_register_out(pmt.intern(\"out\"))\n        self.set_msg_handler(pmt.intern(\"in\"), self.handle)\n\n    def handle(self, msg):\n        if self.rng.random() < self.drop_prob:\n            return\n        if self.rng.random() < self.corrupt_prob and pmt.is_pair(msg):\n            data = list(pmt.u8vector_elements(pmt.cdr(msg)))\n            if data:\n                i = self.rng.randrange(len(data))\n                data[i] ^= 1 << self.rng.randrange(8)\n                msg = pmt.cons(pmt.car(msg), pmt.init_u8vector(len(data), data))\n        if self.delay_ms > 0:\n            threading.Timer(self.delay_ms / 1000.0, self.message_port_pub,\n                            (pmt.intern(\"out\"), msg)).start()\n        else:\n            self.message_port_pub(pmt.intern(\"out\"), msg)\n"
+    affinity: ''
+    alias: ''
+    comment: 'stands in for: your TX chain -> air -> RX chain'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    corrupt_prob: corrupt_prob
+    delay_ms: delay_ms
+    drop_prob: drop_prob
+    seed: '0'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [320, 340]
+    rotation: 0
+    state: enabled
+- name: game0_rx
+  id: network_socket_pdu
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: game --id 0 listens here
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    host: 127.0.0.1
+    mtu: '10000'
+    port: '52002'
+    tcp_no_delay: 'False'
+    type: UDP_CLIENT
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [624, 340]
+    rotation: 0
+    state: enabled
+connections:
+- [game0_tx, pdus, chan_0to1, in]
+- [chan_0to1, out, game1_rx, pdus]
+- [game1_tx, pdus, chan_1to0, in]
+- [chan_1to0, out, game0_rx, pdus]
+metadata:
+  file_format: 1
+  grc_version: 3.10.9.2

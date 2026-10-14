@@ -14,7 +14,6 @@ from gnuradio import qtgui
 from PyQt5 import QtCore
 from gnuradio import analog
 from gnuradio import blocks
-from gnuradio import blocks, gr
 from gnuradio import digital
 from gnuradio import filter
 from gnuradio.filter import firdes
@@ -28,19 +27,12 @@ from gnuradio.eng_arg import eng_float, intx
 from gnuradio import eng_notation
 from gnuradio import gr, pdu
 from gnuradio import iio
-from gnuradio import pdu
-import pmt
-from gnuradio import zeromq
 import numpy as np
-import os
 import sip
 import threading
 import time
-import transeciever_epy_block_0 as epy_block_0  # embedded python block
-import transeciever_epy_block_0_0_0_0 as epy_block_0_0_0_0  # embedded python block
+import transeciever_epy_block_0_0_0 as epy_block_0_0_0  # embedded python block
 import transeciever_epy_block_0_0_1 as epy_block_0_0_1  # embedded python block
-import transeciever_epy_block_1 as epy_block_1  # embedded python block
-import transeciever_epy_block_2 as epy_block_2  # embedded python block
 import transeciever_epy_block_corr as epy_block_corr  # embedded python block
 import transeciever_epy_noise as epy_noise  # embedded python block
 
@@ -82,7 +74,6 @@ class transeciever(gr.top_block, Qt.QWidget):
         ##################################################
         # Variables
         ##################################################
-        self.tl_local_addr = tl_local_addr = int(os.environ.get('TL_LOCAL_ADDR', '1'))
         self.alpha = alpha = 0.35
         self.TRAIN_BITS = TRAIN_BITS = np.unpackbits(np.frombuffer(bytes([0xF8, 0xDD, 0x42, 0x58]), np.uint8))
         self.RC_X = RC_X = np.arange(-8, 9)/2.0
@@ -91,21 +82,10 @@ class transeciever(gr.top_block, Qt.QWidget):
         self.TRAIN_SYMS = TRAIN_SYMS = list(map(complex, 1 - 2*np.bitwise_xor.accumulate(TRAIN_BITS).astype(int)))
         self.RX_AMP = RX_AMP = 1.0
         self.RC_PULSE = RC_PULSE = np.sinc(RC_X)*np.cos(np.pi*alpha*RC_X)/(1-(2*alpha*RC_X)**2)
-        self.MY_ID = MY_ID = int(os.environ.get('MY_ID', '0' if tl_local_addr == 1 else '1'))
+        self.MY_ID = MY_ID = 0
         self.BPSK_CONST = BPSK_CONST = digital.constellation_rect([1+0j, -1+0j], [0, 1],
         2, 2, 1, 1, 1).base()
         self.train_delay = train_delay = 0
-        self.tl_zmq_tx_port = tl_zmq_tx_port = int(os.environ.get('TL_ZMQ_TX_PORT', '52001'))
-        self.tl_zmq_rx_port = tl_zmq_rx_port = int(os.environ.get('TL_ZMQ_RX_PORT', '52002'))
-        self.tl_rto_ms = tl_rto_ms = int(os.environ.get('TL_RTO_MS', '2000'))
-        self.tl_role = tl_role = os.environ.get('TL_ROLE', 'initiator')
-        self.tl_peer_addr_0 = tl_peer_addr_0 = int(os.environ.get('TL_PEER_ADDR', '2'))
-        self.tl_peer_addr = tl_peer_addr = int(os.environ.get('TL_PEER_ADDR', '2'))
-        self.tl_mtu = tl_mtu = int(os.environ.get('TL_MTU', '200'))
-        self.tl_max_retries = tl_max_retries = int(os.environ.get('TL_MAX_RETRIES', '10'))
-        self.tl_m = tl_m = int(os.environ.get('TL_M', '4'))
-        self.tl_local_port = tl_local_port = int(os.environ.get('TL_LOCAL_PORT', '1'))
-        self.tl_local_addr_0 = tl_local_addr_0 = int(os.environ.get('TL_LOCAL_ADDR', '1'))
         self.sym_bw = sym_bw = 0.020
         self.sps = sps = 4
         self.samp_rate = samp_rate = 1.5e6
@@ -126,7 +106,7 @@ class transeciever(gr.top_block, Qt.QWidget):
         self.FEC = FEC = 31
         self.CH_GAIN = CH_GAIN = 20.0
         self.BUFFER_SIZE = BUFFER_SIZE = 4096
-        self.ADDR = ADDR = os.environ.get('SDR_URI', 'ip:192.168.1.10')
+        self.ADDR = ADDR = "ip:192.168.1.10"
 
         ##################################################
         # Blocks
@@ -158,8 +138,6 @@ class transeciever(gr.top_block, Qt.QWidget):
         self._corr_thr_range = qtgui.Range(0.3, 0.98, 0.01, 0.7, 200)
         self._corr_thr_win = qtgui.RangeWidget(self._corr_thr_range, self.set_corr_thr, "'corr_thr'", "counter_slider", float, QtCore.Qt.Horizontal)
         self.top_layout.addWidget(self._corr_thr_win)
-        self.zeromq_push_msg_sink_0 = zeromq.push_msg_sink("tcp://127.0.0.1:" + str(tl_zmq_rx_port), 100, True)
-        self.zeromq_pull_msg_source_0 = zeromq.pull_msg_source("tcp://127.0.0.1:" + str(tl_zmq_tx_port), 100, True)
         self.single_pole_iir_filter_xx_0 = filter.single_pole_iir_filter_ff(0.01, 1)
         self.root_raised_cosine_filter_0 = filter.fir_filter_ccf(
             1,
@@ -307,6 +285,9 @@ class transeciever(gr.top_block, Qt.QWidget):
 
         self._qtgui_freq_sink_x_1_win = sip.wrapinstance(self.qtgui_freq_sink_x_1.qwidget(), Qt.QWidget)
         self.top_layout.addWidget(self._qtgui_freq_sink_x_1_win)
+        self.qtgui_edit_box_msg_0_0 = qtgui.edit_box_msg(qtgui.STRING, "MESSAGE", "TX Message", False, False, '', None)
+        self._qtgui_edit_box_msg_0_0_win = sip.wrapinstance(self.qtgui_edit_box_msg_0_0.qwidget(), Qt.QWidget)
+        self.top_layout.addWidget(self._qtgui_edit_box_msg_0_0_win)
         self.qtgui_const_sink_x_1 = qtgui.const_sink_c(
             1024, #size
             "", #name
@@ -390,8 +371,6 @@ class transeciever(gr.top_block, Qt.QWidget):
         self._qtgui_const_sink_x_0_win = sip.wrapinstance(self.qtgui_const_sink_x_0.qwidget(), Qt.QWidget)
         self.top_layout.addWidget(self._qtgui_const_sink_x_0_win)
         self.pdu_pdu_to_tagged_stream_0_0 = pdu.pdu_to_tagged_stream(gr.types.byte_t, 'packet_len')
-        self.pdu_pdu_filter_0_0 = pdu.pdu_filter(pmt.intern("dst_addr"), pmt.from_uint64(0), False)
-        self.pdu_pdu_filter_0 = pdu.pdu_filter(pmt.intern("dst_addr"), pmt.from_uint64(tl_local_addr), False)
         self.iio_pluto_source_0 = iio.fmcomms2_source_fc32(ADDR if ADDR else iio.get_pluto_uri(), [True, True], BUFFER_SIZE)
         self.iio_pluto_source_0.set_len_tag_key('packet_len')
         self.iio_pluto_source_0.set_frequency(RX_FREQ)
@@ -410,11 +389,8 @@ class transeciever(gr.top_block, Qt.QWidget):
         self.iio_pluto_sink_0_0.set_attenuation(0, CH_GAIN)
         self.iio_pluto_sink_0_0.set_filter_params('Auto', '', 0, 0)
         self.epy_block_corr = epy_block_corr.TrainCorr(ref=TRAIN_REF, thr=corr_thr, mark_delay=train_delay, verbose=1)
-        self.epy_block_2 = epy_block_2.blk()
-        self.epy_block_1 = epy_block_1.blk(m=tl_m, rto_ms=tl_rto_ms, node_role=tl_role, mtu_bytes=tl_mtu, local_addr=tl_local_addr, local_port=tl_local_port, max_retries=tl_max_retries)
         self.epy_block_0_0_1 = epy_block_0_0_1.PacketFramerTX(peer_id=MY_ID, preamble_len=128, repeat_count=1, max_payload_len=max_payload_len, preamble_byte=0xFF, buffer_size=BUFFER_SIZE, postamble_byte=0xFF, train_enable=1, fec=FEC, interleave=True, samples_per_byte=8*sps)
-        self.epy_block_0_0_0_0 = epy_block_0_0_0_0.PacketDeframerRX(peer_id=(1-MY_ID), max_bit_errors=1, max_payload_len=max_payload_len, bit_rate=375000, fec=FEC, interleave=True)
-        self.epy_block_0 = epy_block_0.blk()
+        self.epy_block_0_0_0 = epy_block_0_0_0.PacketDeframerRX(peer_id=(1-MY_ID), max_bit_errors=1, max_payload_len=max_payload_len, bit_rate=375000, fec=FEC, interleave=True)
         self.digital_symbol_sync_xx_0 = digital.symbol_sync_cc(
             digital.TED_SIGNAL_TIMES_SLOPE_ML,
             sps,
@@ -445,7 +421,6 @@ class transeciever(gr.top_block, Qt.QWidget):
         self.blocks_tag_gate_0_0 = blocks.tag_gate(gr.sizeof_gr_complex * 1, False)
         self.blocks_tag_gate_0_0.set_single_key("")
         self.blocks_nlog10_ff_0 = blocks.nlog10_ff(10, 1, 0)
-        self.blocks_message_debug_2 = blocks.message_debug(True, gr.log_levels.info)
         self.blocks_copy_1_2 = blocks.copy(gr.sizeof_gr_complex*1)
         self.blocks_copy_1_2.set_enabled(True)
         self.blocks_copy_1_0_0 = blocks.copy(gr.sizeof_gr_complex*1)
@@ -460,16 +435,8 @@ class transeciever(gr.top_block, Qt.QWidget):
         ##################################################
         # Connections
         ##################################################
-        self.msg_connect((self.epy_block_0, 'pdus'), (self.pdu_pdu_filter_0, 'pdus'))
-        self.msg_connect((self.epy_block_0, 'pdus'), (self.pdu_pdu_filter_0_0, 'pdus'))
-        self.msg_connect((self.epy_block_0_0_0_0, 'pdu_out'), (self.epy_block_0, 'pdus'))
         self.msg_connect((self.epy_block_0_0_1, 'pdu_out'), (self.pdu_pdu_to_tagged_stream_0_0, 'pdus'))
-        self.msg_connect((self.epy_block_1, 'pdu_out'), (self.epy_block_2, 'pdus'))
-        self.msg_connect((self.epy_block_1, 'app_out'), (self.zeromq_push_msg_sink_0, 'in'))
-        self.msg_connect((self.epy_block_2, 'pdus'), (self.epy_block_0_0_1, 'msg_in'))
-        self.msg_connect((self.pdu_pdu_filter_0, 'pdus'), (self.epy_block_1, 'pdu_in'))
-        self.msg_connect((self.pdu_pdu_filter_0_0, 'pdus'), (self.epy_block_1, 'pdu_in'))
-        self.msg_connect((self.zeromq_pull_msg_source_0, 'out'), (self.epy_block_1, 'app_in'))
+        self.msg_connect((self.qtgui_edit_box_msg_0_0, 'msg'), (self.epy_block_0_0_1, 'msg_in'))
         self.connect((self.analog_agc_xx_0, 0), (self.blocks_copy_1_0_0, 0))
         self.connect((self.analog_pwr_squelch_xx_0_0, 0), (self.analog_agc_xx_0, 0))
         self.connect((self.blocks_complex_to_mag_squared_0, 0), (self.single_pole_iir_filter_xx_0, 0))
@@ -478,7 +445,7 @@ class transeciever(gr.top_block, Qt.QWidget):
         self.connect((self.blocks_copy_1_2, 0), (self.root_raised_cosine_filter_0, 0))
         self.connect((self.blocks_nlog10_ff_0, 0), (self.qtgui_time_sink_x_0, 0))
         self.connect((self.blocks_tag_gate_0_0, 0), (self.iio_pluto_sink_0_0, 0))
-        self.connect((self.blocks_unpack_k_bits_bb_0_0, 0), (self.epy_block_0_0_0_0, 0))
+        self.connect((self.blocks_unpack_k_bits_bb_0_0, 0), (self.epy_block_0_0_0, 0))
         self.connect((self.digital_constellation_decoder_cb_0_0, 0), (self.digital_diff_decoder_bb_0_0, 0))
         self.connect((self.digital_constellation_modulator_0_0_0, 0), (self.blocks_tag_gate_0_0, 0))
         self.connect((self.digital_costas_loop_cc_0, 0), (self.digital_constellation_decoder_cb_0_0, 0))
@@ -506,15 +473,6 @@ class transeciever(gr.top_block, Qt.QWidget):
         self.wait()
 
         event.accept()
-
-    def get_tl_local_addr(self):
-        return self.tl_local_addr
-
-    def set_tl_local_addr(self, tl_local_addr):
-        self.tl_local_addr = tl_local_addr
-        self.set_MY_ID(int(os.environ.get('MY_ID', '0' if self.tl_local_addr == 1 else '1')))
-        self.epy_block_1.local_addr = self.tl_local_addr
-        self.pdu_pdu_filter_0.set_val(pmt.from_uint64(self.tl_local_addr))
 
     def get_alpha(self):
         return self.alpha
@@ -582,7 +540,7 @@ class transeciever(gr.top_block, Qt.QWidget):
         self.MY_ID = MY_ID
         self.set_RX_FREQ(self.TX_FREQ_A if self.MY_ID == 1 else self.TX_FREQ_B)
         self.set_TX_FREQ(self.TX_FREQ_A if self.MY_ID == 0 else self.TX_FREQ_B)
-        self.epy_block_0_0_0_0.peer_id = (1-self.MY_ID)
+        self.epy_block_0_0_0.peer_id = (1-self.MY_ID)
         self.epy_block_0_0_1.peer_id = self.MY_ID
 
     def get_BPSK_CONST(self):
@@ -598,75 +556,6 @@ class transeciever(gr.top_block, Qt.QWidget):
     def set_train_delay(self, train_delay):
         self.train_delay = train_delay
         self.epy_block_corr.mark_delay = self.train_delay
-
-    def get_tl_zmq_tx_port(self):
-        return self.tl_zmq_tx_port
-
-    def set_tl_zmq_tx_port(self, tl_zmq_tx_port):
-        self.tl_zmq_tx_port = tl_zmq_tx_port
-
-    def get_tl_zmq_rx_port(self):
-        return self.tl_zmq_rx_port
-
-    def set_tl_zmq_rx_port(self, tl_zmq_rx_port):
-        self.tl_zmq_rx_port = tl_zmq_rx_port
-
-    def get_tl_rto_ms(self):
-        return self.tl_rto_ms
-
-    def set_tl_rto_ms(self, tl_rto_ms):
-        self.tl_rto_ms = tl_rto_ms
-
-    def get_tl_role(self):
-        return self.tl_role
-
-    def set_tl_role(self, tl_role):
-        self.tl_role = tl_role
-
-    def get_tl_peer_addr_0(self):
-        return self.tl_peer_addr_0
-
-    def set_tl_peer_addr_0(self, tl_peer_addr_0):
-        self.tl_peer_addr_0 = tl_peer_addr_0
-
-    def get_tl_peer_addr(self):
-        return self.tl_peer_addr
-
-    def set_tl_peer_addr(self, tl_peer_addr):
-        self.tl_peer_addr = tl_peer_addr
-
-    def get_tl_mtu(self):
-        return self.tl_mtu
-
-    def set_tl_mtu(self, tl_mtu):
-        self.tl_mtu = tl_mtu
-
-    def get_tl_max_retries(self):
-        return self.tl_max_retries
-
-    def set_tl_max_retries(self, tl_max_retries):
-        self.tl_max_retries = tl_max_retries
-        self.epy_block_1.max_retries = self.tl_max_retries
-
-    def get_tl_m(self):
-        return self.tl_m
-
-    def set_tl_m(self, tl_m):
-        self.tl_m = tl_m
-        self.epy_block_1.m = self.tl_m
-
-    def get_tl_local_port(self):
-        return self.tl_local_port
-
-    def set_tl_local_port(self, tl_local_port):
-        self.tl_local_port = tl_local_port
-        self.epy_block_1.local_port = self.tl_local_port
-
-    def get_tl_local_addr_0(self):
-        return self.tl_local_addr_0
-
-    def set_tl_local_addr_0(self, tl_local_addr_0):
-        self.tl_local_addr_0 = tl_local_addr_0
 
     def get_sym_bw(self):
         return self.sym_bw
@@ -709,7 +598,7 @@ class transeciever(gr.top_block, Qt.QWidget):
 
     def set_max_payload_len(self, max_payload_len):
         self.max_payload_len = max_payload_len
-        self.epy_block_0_0_0_0.max_payload_len = self.max_payload_len
+        self.epy_block_0_0_0.max_payload_len = self.max_payload_len
         self.epy_block_0_0_1.max_payload_len = self.max_payload_len
 
     def get_margin_db(self):
@@ -790,7 +679,7 @@ class transeciever(gr.top_block, Qt.QWidget):
 
     def set_FEC(self, FEC):
         self.FEC = FEC
-        self.epy_block_0_0_0_0.fec = self.FEC
+        self.epy_block_0_0_0.fec = self.FEC
         self.epy_block_0_0_1.fec = self.FEC
 
     def get_CH_GAIN(self):

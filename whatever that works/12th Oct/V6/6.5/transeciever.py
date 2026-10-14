@@ -34,7 +34,6 @@ import threading
 import time
 import transeciever_epy_block_0_0_0 as epy_block_0_0_0  # embedded python block
 import transeciever_epy_block_0_0_1 as epy_block_0_0_1  # embedded python block
-import transeciever_epy_block_1 as epy_block_1  # embedded python block
 import transeciever_epy_block_corr as epy_block_corr  # embedded python block
 import transeciever_epy_csma as epy_csma  # embedded python block
 import transeciever_epy_noise as epy_noise  # embedded python block
@@ -90,7 +89,7 @@ class transeciever(gr.top_block, Qt.QWidget):
         self.train_delay = train_delay = 0
         self.sym_bw = sym_bw = 0.020
         self.sps = sps = 4
-        self.samp_rate = samp_rate = 1.5e6
+        self.samp_rate = samp_rate = 1.0e6
         self.power_threshold = power_threshold = -40
         self.max_payload_len = max_payload_len = 2048
         self.margin_db = margin_db = 6
@@ -196,7 +195,6 @@ class transeciever(gr.top_block, Qt.QWidget):
         self.iio_pluto_sink_0_0.set_filter_params('Auto', '', 0, 0)
         self.epy_csma = epy_csma.CsmaMac(samp_rate=samp_rate, samples_per_byte=8*sps, slot_s=0.015, difs_s=0.020, cw_min=8, cw_max=128, cs_margin_db=cs_margin, cs_hyst_db=2.0, cs_bw_hz=400e3, dc_exclude_hz=10e3, nfft=256, sense_s=0.001, floor_window_s=2.0, floor_percentile=10.0, floor_rise_db_s=1.0, echo_timeout_s=0.100, tail_s=0.002, blank_rx=1, max_queue=64, max_defer_s=0.0, verbose=1, stats_every_s=10.0, gate_mode=1, tx_delay_s=0.012, auto_delay=1, gate_guard_s=0.005, tx_mute=TX_MUTE, iio_uri=ADDR, tx_att_db=CH_GAIN, mute_att_db=89.75, unmute_timeout_s=0.1, echo_margin_db=25.0)
         self.epy_block_corr = epy_block_corr.TrainCorr(ref=TRAIN_REF, thr=corr_thr, mark_delay=train_delay, verbose=1)
-        self.epy_block_1 = epy_block_1.TestTrafficRX(log_dir="~/link_tests", verbose=1, print_every=10)
         self.epy_block_0_0_1 = epy_block_0_0_1.PacketFramerTX(src_id=MY_ID, dest_id=DEST_ID, preamble_len=128, repeat_count=1, max_payload_len=max_payload_len, preamble_byte=0xFF, buffer_size=BUFFER_SIZE, postamble_byte=0xFF, train_enable=1, fec=FEC, interleave=True, samples_per_byte=8*sps)
         self.epy_block_0_0_0 = epy_block_0_0_0.PacketDeframerRX(src_id=MY_ID, max_bit_errors=1, max_payload_len=max_payload_len, bit_rate=375000, fec=FEC, interleave=True, accept_all=0, debug=1, max_dbg_lines=20, stats_every_s=10.0, dup_window_s=2.0)
         self.digital_symbol_sync_xx_0 = digital.symbol_sync_cc(
@@ -242,7 +240,6 @@ class transeciever(gr.top_block, Qt.QWidget):
         ##################################################
         # Connections
         ##################################################
-        self.msg_connect((self.epy_block_0_0_0, 'pdu_out'), (self.epy_block_1, 'pdu_in'))
         self.msg_connect((self.epy_block_0_0_1, 'pdu_out'), (self.epy_csma, 'pdu_in'))
         self.msg_connect((self.epy_csma, 'pdu_out'), (self.pdu_pdu_to_tagged_stream_0_0, 'pdus'))
         self.msg_connect((self.qtgui_edit_box_msg_0_0, 'msg'), (self.epy_block_0_0_1, 'msg_in'))
