@@ -1,0 +1,8 @@
+t,dir,peer,id,kind,name,bytes,ref,dur_s,kBps,age_s,res
+72.211,rx,32,795686f128,text,,73,,,,0.121,received
+78.532,rx,32,7e7c96f093,text,,73,,,,0.208,received
+80.252,tx,32,d5ef6f8130,text,,118,145201312,,,,queued
+80.334,tx,32,d5ef6f8130,text,,118,145201312,0.082,1.44,,sent
+98.679,rx,32,c9c862c203,voice,voice_173930.cdpv,14098,,,,1.898,received
+223.181,tx,32,537c9947ee,text,,116,145201323,,,,queued
+283.223,tx,32,537c9947ee,text,,116,145201323,60.042,0.0,,fail:no ACK after all retries

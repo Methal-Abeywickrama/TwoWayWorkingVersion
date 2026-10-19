@@ -1,0 +1,13 @@
+    0.000 session folder /home/maduwage/TwoWayWorkingVersion/whatever that works/19th Oct/v69_game_arena_v4.5/v69_game/debug/20261019_174436
+    1.855 start: node 1; the other nodes are found by their presence messages; logs in /home/maduwage/TwoWayWorkingVersion/whatever that works/19th Oct/v69_game_arena_v4.5/v69_game/debug/20261019_174436_node1
+    1.857 encryption key pair ready, fingerprint 4C3B-243B-2DBA-B189 (/home/maduwage/.config/cdp_link/identity.json)
+    1.864 started grc (pid 244574): gnuradio-companion '/home/maduwage/TwoWayWorkingVersion/whatever that works/19th Oct/v69_game_arena_v4.5/v69_game/v6.9_cdp_link.grc' - its output: /home/maduwage/TwoWayWorkingVersion/whatever that works/19th Oct/v69_game_arena_v4.5/v69_game/debug/20261019_174436_node1/grc.log
+    1.867 voice: PipeWire/PulseAudio (parec, pacat)
+    1.867 link: no flowgraph on tcp://127.0.0.1:5100 yet (press Run in GRC)
+    1.964 C++ kernels for the flowgraph: ready (0.0 s)
+    7.870 link: connected to the flowgraph (node 1, mss 1000, window 16)
+   12.265 node 32 (MethalWorkstation) joined: new chat
+   12.293 node 32: public key 942A-1A9A-8451-4DF3
+  489.396 dashboard on http://127.0.0.1:5310/
+  648.942 closing everything
+  649.081 stopped grc (exit -15)

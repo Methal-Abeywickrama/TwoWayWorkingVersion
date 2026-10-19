@@ -1,0 +1,17 @@
+t,dir,peer,id,kind,name,bytes,ref,dur_s,kBps,age_s,res
+17.701,tx,32,36572b7cbc,text,,119,285351767,,,,queued
+18.6,tx,32,36572b7cbc,text,,119,285351767,0.899,0.13,,sent
+21.111,rx,32,f660157d98,text,,73,,,,0.124,received
+21.228,tx,32,76df1c3e9f,text,,117,285351769,,,,queued
+21.332,tx,32,76df1c3e9f,text,,117,285351769,0.105,1.12,,sent
+22.829,tx,32,d9c220a32d,text,,120,285351770,,,,queued
+23.827,tx,32,d9c220a32d,text,,120,285351770,0.999,0.12,,sent
+25.11,tx,32,2530d16cd9,text,,120,285351772,,,,queued
+26.1,tx,32,2530d16cd9,text,,120,285351772,0.99,0.12,,sent
+48.927,tx,32,5ad30ba66d,image,Screenshot From 2026-10-04 19-22-46.png,1125460,285351777,,,,queued
+102.065,rx,32,717e5601a4,image,wp10518387.jpg,96191,,,,71.247,received
+618.927,tx,32,125fddad13,text,,114,285351892,,,,queued
+619.547,tx,32,125fddad13,text,,114,285351892,0.62,0.18,,sent
+628.267,rx,32,7b9e54fc94,text,,73,,,,0.139,received
+629.38,tx,32,acfab06616,text,,117,285351895,,,,queued
+629.768,tx,32,acfab06616,text,,117,285351895,0.387,0.3,,sent

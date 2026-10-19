@@ -1,0 +1,96 @@
+0.343 bridge client ev=connect peer=127.0.0.1:57622 n=1
+1.038 csma transitions_suppressed n=110 sec=0
+2.070 csma transitions_suppressed n=113 sec=1
+3.049 csma transitions_suppressed n=132 sec=2
+4.036 csma transitions_suppressed n=279 sec=3
+5.089 csma transitions_suppressed n=97 sec=4
+8.039 csma transitions_suppressed n=60 sec=7
+9.038 csma transitions_suppressed n=306 sec=8
+11.037 csma transitions_suppressed n=35 sec=10
+11.435 csma retry_drop dst=32 seq=0 retries=7 app_ref=1784116232 app_seg=0
+11.435 bridge seg_resend mid=1784116232 seg=0 why=dropped resent=1 acked=0 segs=1
+12.037 csma transitions_suppressed n=94 sec=11
+13.036 csma transitions_suppressed n=310 sec=12
+14.044 csma transitions_suppressed n=62 sec=13
+15.084 csma transitions_suppressed n=54 sec=14
+16.038 csma transitions_suppressed n=32 sec=15
+17.038 csma transitions_suppressed n=264 sec=16
+18.045 csma transitions_suppressed n=80 sec=17
+19.045 csma transitions_suppressed n=4 sec=18
+19.553 csma retry_drop dst=32 seq=1 retries=7 app_ref=1784116232 app_seg=0
+19.553 bridge seg_resend mid=1784116232 seg=0 why=dropped resent=2 acked=0 segs=1
+20.036 csma transitions_suppressed n=84 sec=19
+21.040 csma transitions_suppressed n=257 sec=20
+22.039 csma transitions_suppressed n=154 sec=21
+25.037 csma transitions_suppressed n=188 sec=24
+26.037 csma transitions_suppressed n=338 sec=25
+27.040 csma transitions_suppressed n=84 sec=26
+27.663 csma retry_drop dst=32 seq=2 retries=7 app_ref=1784116232 app_seg=0
+27.663 bridge seg_resend mid=1784116232 seg=0 why=dropped resent=3 acked=0 segs=1
+28.040 csma transitions_suppressed n=46 sec=27
+29.039 csma transitions_suppressed n=248 sec=28
+30.038 csma transitions_suppressed n=266 sec=29
+31.038 csma transitions_suppressed n=62 sec=30
+32.037 csma transitions_suppressed n=205 sec=31
+33.037 csma transitions_suppressed n=307 sec=32
+34.065 csma transitions_suppressed n=94 sec=33
+35.036 csma transitions_suppressed n=108 sec=34
+36.047 csma transitions_suppressed n=286 sec=35
+37.059 csma transitions_suppressed n=40 sec=36
+38.038 csma transitions_suppressed n=218 sec=37
+39.046 csma transitions_suppressed n=198 sec=38
+40.039 csma transitions_suppressed n=97 sec=39
+41.036 csma transitions_suppressed n=299 sec=40
+42.064 csma transitions_suppressed n=160 sec=41
+43.040 csma transitions_suppressed n=98 sec=42
+44.039 csma transitions_suppressed n=295 sec=43
+45.063 csma transitions_suppressed n=153 sec=44
+45.112 csma retry_drop dst=32 seq=3 retries=7 app_ref=1784116232 app_seg=0
+46.046 csma transitions_suppressed n=158 sec=45
+47.267 csma transitions_suppressed n=196 sec=46
+48.237 csma transitions_suppressed n=209 sec=47
+49.233 csma transitions_suppressed n=302 sec=48
+50.236 csma transitions_suppressed n=87 sec=49
+51.236 csma transitions_suppressed n=203 sec=50
+52.235 csma transitions_suppressed n=183 sec=51
+53.238 csma transitions_suppressed n=290 sec=52
+54.234 csma transitions_suppressed n=306 sec=53
+55.237 csma transitions_suppressed n=306 sec=54
+56.233 csma transitions_suppressed n=307 sec=55
+57.236 csma transitions_suppressed n=291 sec=56
+58.236 csma transitions_suppressed n=330 sec=57
+59.235 csma transitions_suppressed n=298 sec=58
+60.235 csma transitions_suppressed n=280 sec=59
+61.254 csma transitions_suppressed n=322 sec=60
+62.253 csma transitions_suppressed n=298 sec=61
+63.253 csma transitions_suppressed n=316 sec=62
+64.252 csma transitions_suppressed n=284 sec=63
+65.252 csma transitions_suppressed n=314 sec=64
+66.251 csma transitions_suppressed n=298 sec=65
+67.250 csma transitions_suppressed n=248 sec=66
+68.254 csma transitions_suppressed n=284 sec=67
+69.262 csma transitions_suppressed n=187 sec=68
+70.253 csma transitions_suppressed n=156 sec=69
+71.252 csma transitions_suppressed n=293 sec=70
+72.251 csma transitions_suppressed n=186 sec=71
+73.251 csma transitions_suppressed n=306 sec=72
+74.255 csma transitions_suppressed n=245 sec=73
+75.254 csma transitions_suppressed n=289 sec=74
+76.250 csma transitions_suppressed n=210 sec=75
+77.253 csma transitions_suppressed n=162 sec=76
+78.252 csma transitions_suppressed n=242 sec=77
+79.252 csma transitions_suppressed n=324 sec=78
+80.251 csma transitions_suppressed n=272 sec=79
+81.251 csma transitions_suppressed n=246 sec=80
+82.254 csma transitions_suppressed n=295 sec=81
+83.258 csma transitions_suppressed n=236 sec=82
+84.253 csma transitions_suppressed n=34 sec=83
+85.252 csma transitions_suppressed n=149 sec=84
+86.256 csma transitions_suppressed n=263 sec=85
+86.694 csma retry_drop dst=32 seq=4 retries=7 app_ref=1784116232 app_seg=0
+87.255 csma transitions_suppressed n=36 sec=86
+88.251 csma transitions_suppressed n=137 sec=87
+89.250 csma transitions_suppressed n=302 sec=88
+90.250 csma transitions_suppressed n=187 sec=89
+91.253 csma transitions_suppressed n=194 sec=90
+91.500 flowgraph stopped
