@@ -1,0 +1,32 @@
+0.389 bridge client ev=connect peer=127.0.0.1:37212 n=1
+22.074 csma transitions_suppressed n=16 sec=21
+121.152 csma transitions_suppressed n=10 sec=120
+129.090 csma transitions_suppressed n=26 sec=128
+132.150 csma transitions_suppressed n=1 sec=131
+144.090 csma transitions_suppressed n=8 sec=143
+146.187 csma transitions_suppressed n=3 sec=145
+174.093 csma transitions_suppressed n=22 sec=173
+196.211 csma transitions_suppressed n=8 sec=195
+199.079 csma transitions_suppressed n=20 sec=198
+206.079 csma transitions_suppressed n=36 sec=205
+208.102 csma transitions_suppressed n=38 sec=207
+210.085 csma transitions_suppressed n=20 sec=209
+211.093 csma transitions_suppressed n=42 sec=210
+212.075 csma transitions_suppressed n=60 sec=211
+213.112 csma transitions_suppressed n=76 sec=212
+214.095 csma transitions_suppressed n=36 sec=213
+293.081 csma transitions_suppressed n=24 sec=292
+294.088 csma transitions_suppressed n=43 sec=293
+295.079 csma transitions_suppressed n=16 sec=294
+296.091 csma transitions_suppressed n=51 sec=295
+297.111 csma transitions_suppressed n=28 sec=296
+299.081 csma transitions_suppressed n=4 sec=298
+300.081 csma transitions_suppressed n=63 sec=299
+301.187 csma transitions_suppressed n=13 sec=300
+303.083 csma transitions_suppressed n=120 sec=302
+304.099 csma transitions_suppressed n=172 sec=303
+305.078 csma transitions_suppressed n=141 sec=304
+306.126 csma transitions_suppressed n=103 sec=305
+567.287 csma transitions_suppressed n=52 sec=566
+569.285 csma transitions_suppressed n=28 sec=568
+1299.659 flowgraph stopped

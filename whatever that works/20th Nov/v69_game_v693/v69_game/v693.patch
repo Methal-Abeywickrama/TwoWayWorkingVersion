@@ -1,0 +1,1363 @@
+--- a/cdp_link_epy_csma.py
++++ b/cdp_link_epy_csma.py
+@@ -59,6 +59,29 @@
+ ended on air. Frame airtimes are computed from the framer settings (phy_preamble_len, phy_fec, phy_buffer_size,
+ samples_per_byte) - keep them equal to the framer's.
+ 
++v6.9.2 (three changes against frames that get stuck; every one can be switched off, see the env variables)
++  1. Longer preamble on the first frame of every transmission (DATA burst or Block ACK): the receiver acquires the
++     signal from silence there and lost 30-36 % of those frames with 128 B (19 Oct logs; later frames 1-11 %).
++     first_pre_len / env CDP_MAC_PRE1 (bytes, default 256; 0 or <= phy_preamble_len = off). The framer takes the
++     length per frame from the PDU metadata key "pre_len".
++  2. Duplicate after dup_after retries (env CDP_MAC_DUP_AFTER, default 4, 0 = off): a frame retried that often is
++     sent twice in its burst - once in its place, once more at the end of the burst. The receiver keeps the first
++     good copy (its usual duplicate filter); both copies are acknowledged by the same Block ACK.
++  3. Window Block ACK (window_ba / env CDP_MAC_WBA, default 1): the Block ACK reports the receiver's whole
++     reorder window, not only the frames of the burst it answers:
++       WINDOW BLOCK ACK (8 B + ceil(N/8)):  FC (TT = 11) | BSN (2) | DURATION (2) = 0 | SSN (2) | NB | BITMAP (NB B)
++         SSN     = the receiver's window start (next SN it needs in order; everything before it arrived)
++         BITMAP  bit i (LSB first) = SN (SSN + i) is in the reorder buffer
++     One Block ACK that gets through acknowledges every frame the receiver holds, also those of earlier bursts whose
++     Block ACK was lost (19 Oct: 72 % of the received frames were such needless retransmissions). Both formats are
++     always understood; the setting only chooses what this node sends. Both nodes need v6.9.2 (a v6.9 node does
++     not know TT = 11).
++v6.9.3
++  4. Inside a burst the receiver is already locked: frames 2..M get a short preamble (pre_in / env CDP_MAC_PRE_IN,
++     bytes, default 64; 0 = none, >= phy_preamble_len = off) and no postamble - only the last frame of the burst
++     carries the postamble that pads the whole burst to whole Pluto buffers (at least one buffer, as before).
++     The framer takes both per frame from the PDU metadata keys "pre_len" and "post_len".
++
+ Read-out for QT widgets (Function Probe): cs_db(), floor_db(), threshold_db(), is_busy(), is_tx(), queue_len(),
+ is_muted(), nav_ms(), cw(), window_info()
+ """
+@@ -123,6 +146,7 @@
+ T_DATA, T_BA = 0, 2
+ F_RETRY = 0x04
+ F_NOACK = 0x08          # unreliable frame (UDP / broadcast): no Block ACK, no reordering
++T_WBA = 3               # v6.9.2: Block ACK with a bitmap of the receiver's whole window
+ HDR_DATA = 13
+ HDR_BA = 8
+ BCAST = 0xFF
+@@ -157,6 +181,22 @@
+     return bytes([FC_BASE | T_BA]) + u16(bsn) + u16(0) + u16(rws) + bytes([cnt & 0xFF]) + bytes(bm)
+ 
+ 
++def wba_frame(bsn, ssn, nbits, wbits):
++    """v6.9.2 window Block ACK: SSN = receiver window start, bit i = SN (SSN + i) received (LSB first)."""
++    nb = max(1, (nbits + 7) // 8)
++    bm = bytearray(nb)
++    for i in range(8 * nb):
++        if wbits >> i & 1:
++            bm[i // 8] |= 1 << (i % 8)
++    return bytes([FC_BASE | T_WBA]) + u16(bsn) + u16(0) + u16(ssn) + bytes([nb]) + bytes(bm)
++
++
++def wba_has(h, sn):
++    """Does window Block ACK h say that SN sn has arrived?"""
++    d = sdiff(sn, h["rws"])
++    return d < 0 or (d < h["nbits"] and bool(h["wbits"] >> d & 1))
++
++
+ def parse_mac(b):
+     if len(b) < 5 or (b[0] & 0xF0) != FC_BASE:
+         return None
+@@ -172,9 +212,27 @@
+             if b[HDR_BA + i // 8] >> (i % 8) & 1:
+                 bits |= 1 << i
+         return {"type": T_BA, "bsn": g(1), "dur": g(3) / 1e4, "rws": g(5), "cnt": cnt, "bits": bits}
++    if t == T_WBA and len(b) >= HDR_BA + 1:
++        nb = min(b[7], len(b) - HDR_BA)
++        wbits = 0
++        for i in range(8 * nb):
++            if b[HDR_BA + i // 8] >> (i % 8) & 1:
++                wbits |= 1 << i
++        return {"type": T_WBA, "bsn": g(1), "dur": g(3) / 1e4, "rws": g(5), "nbits": 8 * nb, "wbits": wbits,
++                "cnt": 0, "bits": 0}
+     return None
+ 
+ 
++def _unique(recs):
++    """records in first-seen order without repeats (a burst may carry a frame twice)"""
++    seen, out = set(), []
++    for r in recs:
++        if id(r) not in seen:
++            seen.add(id(r))
++            out.append(r)
++    return out
++
++
+ def id_name(i):
+     return "all" if i == BCAST else str(i)
+ 
+@@ -235,12 +293,16 @@
+         return moved
+ 
+     def on_block_ack(self, burst, bits, rws):
+-        """burst: list of records in burst order. Returns (acked, nacked, dropped) lists of records."""
++        """burst: list of records in burst order (a record twice if it was sent twice). Returns (acked, nacked,
++        dropped) lists of records."""
+         acked, nacked, dropped = [], [], []
++        got = {}
+         for i, r in enumerate(burst):
++            got[id(r)] = got.get(id(r), False) or bool(bits >> i & 1)
++        for r in _unique(burst):
+             if r["state"] in ("acked", "dropped"):
+                 continue
+-            ok = bool(bits >> i & 1) or sdiff(r["sn"], rws) < 0
++            ok = got[id(r)] or sdiff(r["sn"], rws) < 0
+             if ok:
+                 r["state"] = "acked"
+                 acked.append(r)
+@@ -254,9 +316,25 @@
+                 acked.append(r)
+         return acked, nacked, dropped
+ 
++    def on_window_ack(self, burst, h):
++        """v6.9.2 window Block ACK h (SSN + bitmap of the receiver's window): every frame in our window that the
++        receiver has is acknowledged - also frames of earlier bursts; a frame of this burst it does not have is
++        counted as failed. burst = [] for a late or stray Block ACK (only acknowledgements then)."""
++        acked, nacked, dropped = [], [], []
++        mine = {id(r) for r in burst}
++        for r in self.in_window():
++            if r["state"] in ("acked", "dropped"):
++                continue
++            if wba_has(h, r["sn"]):
++                r["state"] = "acked"
++                acked.append(r)
++            elif id(r) in mine and r["state"] == "out":
++                self._fail(r, nacked, dropped)
++        return acked, nacked, dropped
++
+     def on_no_ba(self, burst):
+         nacked, dropped = [], []
+-        for r in burst:
++        for r in _unique(burst):
+             if r["state"] == "out":
+                 self._fail(r, nacked, dropped)
+         return nacked, dropped
+@@ -476,7 +554,8 @@
+                  floor_window_s=2.0, floor_percentile=10.0, floor_rise_db_s=1.0,
+                  blank_rx=1, tx_delay_s=0.012, auto_delay=1, gate_guard_s=0.005,
+                  tx_mute=1, iio_uri="ip:192.168.1.10", tx_att_db=20.0, mute_att_db=89.75,
+-                 unmute_timeout_s=0.1, echo_margin_db=25.0, verbose=1, stats_every_s=10.0):
++                 unmute_timeout_s=0.1, echo_margin_db=25.0, verbose=1, stats_every_s=10.0,
++                 first_pre_len=-1, dup_after=-1, window_ba=-1, pre_in=-1):
+         gr.sync_block.__init__(self, name="CSMA/CA DCF + SR-ARQ (TXOP burst, Block ACK) + TX mute",
+                                in_sig=[np.complex64], out_sig=[np.complex64])
+         self.samp_rate = float(samp_rate)
+@@ -519,6 +598,24 @@
+         self.verbose = int(verbose)
+         self.stats_every_s = float(stats_every_s)
+         self._sense_s = float(sense_s)
++        # v6.9.2: -1 (or empty) = take the value from the environment (CDP_MAC_PRE1 / _DUP_AFTER / _WBA)
++        def pick(v, key, default):
++            try:
++                v = float(v)
++            except (TypeError, ValueError):
++                v = -1.0
++            if v < 0:
++                try:
++                    v = float(os.environ.get(key, "").strip() or default)
++                except ValueError:
++                    v = float(default)
++            return int(v)
++        self.first_pre_len = pick(first_pre_len, "CDP_MAC_PRE1", 256)
++        self.dup_after = max(0, pick(dup_after, "CDP_MAC_DUP_AFTER", 4))
++        self.window_ba = 1 if pick(window_ba, "CDP_MAC_WBA", 1) else 0
++        self._pre1 = self.first_pre_len if self.first_pre_len > self.phy_preamble_len else None
++        self.pre_in = pick(pre_in, "CDP_MAC_PRE_IN", 64)                    # v6.9.3
++        self._pre_in = self.pre_in if 0 <= self.pre_in < self.phy_preamble_len else None
+         if self.window_n >= 0x8000:
+             raise ValueError("window_n must be < 32768")
+ 
+@@ -626,25 +723,52 @@
+     def _cw_for(self, k):
+         return min(self.cw_max, (self.cw_min + 1) * (2 ** min(k, self.k_max)) - 1)
+ 
+-    def phy_bytes(self, plen):
+-        """Bytes on air for a framer payload of plen bytes (same formula as the Packet Framer TX)."""
++    def phy_raw(self, plen, pre=None):
++        """Bytes of a frame without its postamble: preamble + train + sync + coded header and body"""
+         if self.phy_fec in (15, 31):
+             k = {15: 11, 31: 26}[self.phy_fec]
+             bits = math.ceil(56 / k) * self.phy_fec + math.ceil((plen + 4) * 8 / k) * self.phy_fec
+             body = math.ceil(bits / 8)
+         else:
+             body = 7 + plen + 4
+-        raw = self.phy_preamble_len + 4 + 4 + body
++        return (self.phy_preamble_len if pre is None else pre) + 4 + 4 + body
++
++    def _unit(self):
++        return max(1, math.ceil(self.phy_buffer_size / self.samples_per_byte))     # bytes per Pluto sink buffer
++
++    def _burst_post(self, raw_total):
++        """postamble after the last frame of a burst: at least one sink buffer, burst = whole number of buffers"""
++        if self.phy_buffer_size <= 0:
++            return 0
++        u = self._unit()
++        return math.ceil((raw_total + u) / u) * u - raw_total
++
++    def phy_bytes(self, plen, pre=None, post=None):
++        """Bytes on air for a framer payload of plen bytes (same formula as the Packet Framer TX); pre = preamble
++        length of this frame if it is not phy_preamble_len, post = its postamble if the MAC sets it."""
++        if post is not None:
++            return self.phy_raw(plen, pre) + post
++        if self.phy_fec in (15, 31):
++            k = {15: 11, 31: 26}[self.phy_fec]
++            bits = math.ceil(56 / k) * self.phy_fec + math.ceil((plen + 4) * 8 / k) * self.phy_fec
++            body = math.ceil(bits / 8)
++        else:
++            body = 7 + plen + 4
++        raw = (self.phy_preamble_len if pre is None else pre) + 4 + 4 + body
+         if self.phy_buffer_size <= 0:
+             return raw
+         unit = max(1, math.ceil(self.phy_buffer_size / self.samples_per_byte))
+         return math.ceil((raw + unit) / unit) * unit
+ 
+-    def air_s(self, plen):
+-        return self.phy_bytes(plen) * self.samples_per_byte / self.samp_rate
++    def air_s(self, plen, pre=None, post=None):
++        return self.phy_bytes(plen, pre, post) * self.samples_per_byte / self.samp_rate
++
++    def _wba_bits(self):
++        return 8 * ((self.window_n + 7) // 8)
+ 
+     def ba_air(self):
+-        return self.air_s(HDR_BA + (self.burst_m + 7) // 8)
++        n = self._wba_bits() // 8 if self.window_ba else (self.burst_m + 7) // 8
++        return self.air_s(HDR_BA + n, self._pre1)        # a Block ACK is always the first frame of its transmission
+ 
+     # ------------------------------------------------------------------ start / stop
+     def start(self):
+@@ -675,6 +799,15 @@
+               f"{1e3 * self.sifs_s:g} ms, DIFS {1e3 * self.difs():.1f} ms, CW {cws}, retry limit {self.retry_limit}, "
+               f"Block ACK timeout {1e3 * self.ba_timeout_s:g} ms (Block ACK {1e3 * self.ba_air():.1f} ms on air)",
+               flush=True)
++        print(f"[MAC] v6.9.2: first frame of a transmission with "
++              f"{f'a {self._pre1} B preamble' if self._pre1 else 'the normal preamble'}, "
++              f"{f'a duplicate after {self.dup_after} retries' if self.dup_after else 'no duplicates'}, "
++              f"Block ACK {'with the window bitmap' if self.window_ba else 'per burst (v6.9 format)'}", flush=True)
++        print(f"[MAC] v6.9.3: frames 2..{self.burst_m} of a burst "
++              f"{f'with a {self._pre_in} B preamble and no postamble' if self._pre_in is not None else 'unchanged'}"
++              f" | {self.samples_per_byte:g} samples per byte, preamble {self.phy_preamble_len} B", flush=True)
++        _emit("csma", "config_v692", first_pre_len=self._pre1 or self.phy_preamble_len, dup_after=self.dup_after,
++              window_ba=self.window_ba)
+         return True
+ 
+     def stop(self):
+@@ -908,6 +1041,10 @@
+         meta = pmt.dict_add(meta, pmt.intern("mac_id"), pmt.from_long(int(e["id"])))
+         meta = pmt.dict_add(meta, pmt.intern("mac_type"), pmt.intern(e["kind"]))
+         meta = pmt.dict_add(meta, pmt.intern("mac_seq"), pmt.from_long(int(e.get("sn", 0))))
++        if e.get("pre") is not None:
++            meta = pmt.dict_add(meta, pmt.intern("pre_len"), pmt.from_long(int(e["pre"])))
++        if e.get("post") is not None:
++            meta = pmt.dict_add(meta, pmt.intern("post_len"), pmt.from_long(int(e["post"])))
+         for k, v in keep.items():
+             meta = pmt.dict_add(meta, pmt.intern(k), v)
+         with self._lock:
+@@ -929,7 +1066,7 @@
+                 return
+             e["coded"] = msg
+             e["nbytes"] = int(pmt.length(pmt.cdr(msg)))
+-            if e["kind"] == "D" and e.get("plen") is not None and self.phy_bytes(e["plen"]) != e["nbytes"]:
++            if e["kind"] == "D" and e.get("plen") is not None and self.phy_bytes(e["plen"], e.get("pre"), e.get("post")) != e["nbytes"]:
+                 self._st["len_mismatch"] += 1
+ 
+     def _on_rx(self, msg):
+@@ -1018,7 +1155,7 @@
+                 self._dbg["nav_set"] += 1
+                 self._ev("nav", src=src, dst=dst, typ=h["type"], dur_ms=round(1e3 * h["dur"], 2))
+             return
+-        if h["type"] == T_BA:
++        if h["type"] in (T_BA, T_WBA):
+             if dst == self.my_id:
+                 self._got_ba(src, h)
+             return
+@@ -1055,7 +1192,8 @@
+         ba = next((b for b in self._ba_due if b["key"] == key), None)
+         if ba is None:
+             ba = {"key": key, "src": src, "bsn": h["bsn"], "cnt": h["cnt"], "bits": 0, "kind": "BA",
+-                  "id": self._new_id(), "t_first": self._t, "framed": False, "coded": None, "nbytes": 0}
++                  "id": self._new_id(), "t_first": self._t, "framed": False, "coded": None, "nbytes": 0,
++                  "pre": self._pre1}
+             self._ba_due.append(ba)
+         ba["bits"] |= 1 << h["idx"]
+         ba["cnt"] = max(ba["cnt"], h["cnt"])
+@@ -1077,9 +1215,17 @@
+             print(f"\n{'=' * 40}\n[RX RECEIVED] {seq} from ID {src} to {to}: {shown}\n{'=' * 40}\n", flush=True)
+ 
+     # ------------------------------------------------------------------ Block ACK at the sender: MAC first ...
++    @staticmethod
++    def _pos_bits(h, pos):
++        """Block ACK -> bit i = burst frame i acknowledged (for the logs; also for the window format)"""
++        if h["type"] == T_WBA:
++            return sum(1 << i for i, r in enumerate(pos) if wba_has(h, r["sn"]))
++        return h["bits"] & ((1 << len(pos)) - 1)
++
+     def _got_ba(self, src, h):
+         a = self._await
+         if a is not None and a["dst"] == src and a["bsn"] == h["bsn"]:
++            pb = self._pos_bits(h, a["pos"])
+             rtt = self._t - a["air_end"]
+             self._rtt.append(rtt)
+             self._await = None
+@@ -1087,45 +1233,51 @@
+             self._st["ba_rx"] += 1
+             self._dbg["ba_rx"] += 1
+             self._ev("ba_rx", bsn=h["bsn"], src=src, rtt_ms=round(1e3 * rtt, 2), rws=h["rws"],
+-                     bitmap=bitstr(h["bits"], a["n"]), n=a["n"], acked=bin(h["bits"] & ((1 << a["n"]) - 1)).count("1"))
+-            self._arq_inbox.append(("ba", src, a["recs"], h["bits"], h["rws"], a["bsn"]))
+-            self._txop_done("ba", acked=bin(h["bits"] & ((1 << a["n"]) - 1)).count("1"), rtt_ms=round(1e3 * rtt, 1),
+-                            bitmap=bitstr(h["bits"], a["n"]))
++                     bitmap=bitstr(pb, a["n"]), n=a["n"], acked=bin(pb).count("1"), window=int(h["type"] == T_WBA))
++            self._arq_inbox.append(("ba", src, a["pos"], h, a["bsn"]))
++            self._txop_done("ba", acked=bin(pb).count("1"), rtt_ms=round(1e3 * rtt, 1), bitmap=bitstr(pb, a["n"]))
+             self._reset_contention()                         # ... the MAC goes straight back to its other work
+             return
+         lf = self._last_failed
+         if lf is not None and lf["dst"] == src and lf["bsn"] == h["bsn"]:
+             self._st["late_ba"] += 1
+             self._k = 0
+-            self._ev("ba_rx", bsn=h["bsn"], src=src, late=1, rws=h["rws"], bitmap=bitstr(h["bits"], lf["n"]),
+-                     n=lf["n"])
+-            self._arq_inbox.append(("late_ba", src, lf["recs"], h["bits"], h["rws"], lf["bsn"]))
++            self._ev("ba_rx", bsn=h["bsn"], src=src, late=1, rws=h["rws"],
++                     bitmap=bitstr(self._pos_bits(h, lf["pos"]), lf["n"]), n=lf["n"])
++            self._arq_inbox.append(("late_ba", src, lf["pos"], h, lf["bsn"]))
+             self._last_failed = None
+             return
+         self._st["stray_ba"] += 1
+         self._ev("ba_stray", bsn=h["bsn"], src=src, rws=h["rws"])
+-        self._arq_inbox.append(("cum", src, [], 0, h["rws"], h["bsn"]))
++        self._arq_inbox.append(("cum", src, [], h, h["bsn"]))
+ 
+     # ------------------------------------------------------------------ ... ARQ reads it afterwards
+     def _arq_process(self):
+         while self._arq_inbox:
+-            what, dst, recs, bits, rws, bsn = self._arq_inbox.popleft()
++            what, dst, pos, h, bsn = self._arq_inbox.popleft()
+             s = self._tx_s.get(dst)
+             if s is None:
+                 continue
+             with self._lock:
+                 if what == "noba":
+                     acked = []
+-                    nacked, dropped = s.on_no_ba(recs)
++                    nacked, dropped = s.on_no_ba(pos)
++                elif h["type"] == T_WBA:
++                    # window Block ACK: late / stray ones only acknowledge (their frames were counted already)
++                    acked, nacked, dropped = s.on_window_ack(pos if what == "ba" else [], h)
+                 elif what == "late_ba":
+                     # its frames were already counted as failed: take only the positive acknowledgements
+-                    acked = [r for i, r in enumerate(recs) if bits >> i & 1 and r["state"] not in ("acked", "dropped")]
++                    bits = h["bits"]
++                    hit = {id(r) for i, r in enumerate(pos) if bits >> i & 1}
++                    acked = [r for r in _unique(pos) if id(r) in hit and r["state"] not in ("acked", "dropped")]
+                     for r in acked:
+                         r["state"] = "acked"
+-                    a2, nacked, dropped = s.on_block_ack([], 0, rws)
++                    a2, nacked, dropped = s.on_block_ack([], 0, h["rws"])
+                     acked += a2
++                elif what == "cum":
++                    acked, nacked, dropped = s.on_block_ack([], 0, h["rws"])
+                 else:
+-                    acked, nacked, dropped = s.on_block_ack(recs, bits, rws)
++                    acked, nacked, dropped = s.on_block_ack(pos, h["bits"], h["rws"])
+                 ws0 = s.ws
+                 moved = s.slide()
+                 admitted = s.admit()
+@@ -1197,7 +1349,9 @@
+         _, unrel, dst = min(cands)                          # oldest waiting frame first
+         bsn = self._bsn
+         self._bsn = (self._bsn + 1) & MASK
+-        frames, recs, tot = [], [], 0.0
++        frames, recs = [], []
++        pre1 = self._pre1                                     # v6.9.2: longer preamble on the first frame
++        tot = 0.0 if pre1 is None else (pre1 - self.phy_preamble_len) * self.samples_per_byte / self.samp_rate
+         if unrel:
+             q = self._uq[dst]
+             while q and len(frames) < self.burst_m:
+@@ -1212,19 +1366,38 @@
+                 tot += a
+         else:
+             s = self._tx_s[dst]
++            dups = []                                         # v6.9.2: frames that go twice
+             for r in s.eligible():
+-                if len(recs) >= self.burst_m:
++                if len(recs) + len(dups) >= self.burst_m:
+                     break
+                 a = self.air_s(HDR_DATA + len(r["payload"]))
+                 if recs and tot + a > self.txop_limit_s:
+                     break
+                 recs.append(r)
+                 tot += a
+-            for r in recs:
++                if (self.dup_after and r["retries"] >= self.dup_after and len(recs) + len(dups) < self.burst_m
++                        and tot + a <= self.txop_limit_s):
++                    dups.append(r)
++                    tot += a
++            for i, r in enumerate(recs + dups):               # the second copies go to the end of the burst
+                 plen = HDR_DATA + len(r["payload"])
+                 frames.append({"kind": "D", "id": self._new_id(), "sn": r["sn"], "plen": plen, "rec": r,
+                                "payload": r["payload"], "keep": r["keep"], "air": self.air_s(plen),
+-                               "t_enq": r["t_enq"]})
++                               "t_enq": r["t_enq"], "dup": i >= len(recs)})
++            if dups:
++                self._st["tx_dup"] += len(dups)
++        if pre1 is not None and frames:
++            frames[0]["pre"] = pre1
++            frames[0]["air"] = self.air_s(frames[0]["plen"], pre1)
++        if self._pre_in is not None and len(frames) > 1:     # v6.9.3: short preamble inside, one postamble at the end
++            for f in frames[1:]:
++                f["pre"] = self._pre_in
++            raws = [self.phy_raw(f["plen"], f.get("pre")) for f in frames]
++            for f in frames:
++                f["post"] = 0
++            frames[-1]["post"] = self._burst_post(sum(raws))
++            for f in frames:
++                f["air"] = self.air_s(f["plen"], f.get("pre"), f["post"])
+         n = len(frames)
+         total = sum(f["air"] for f in frames)
+         rem = total
+@@ -1247,7 +1420,8 @@
+         self._bsizes[n] += 1
+         self._self_tx = True
+         self._tx = {"phase": "prep", "frames": frames, "dst": dst, "bsn": bsn, "recs": recs, "t_rel": self._t,
+-                    "mute": self._mute_on(), "air_total": total, "kind": "D", "unrel": bool(unrel)}
++                    "mute": self._mute_on(), "air_total": total, "kind": "D", "unrel": bool(unrel),
++                    "pos": [f["rec"] for f in frames]}
+         p_done = self._p_done_t if self._p_done_t is not None else self._t
+         self._txr = {"t": round(_time.time(), 3), "kind": ("B" if dst == BCAST else "U") if unrel else "R",
+                      "dst": dst, "bsn": bsn, "n": n, "bytes": sum(len(f["payload"]) for f in frames),
+@@ -1265,6 +1439,7 @@
+                  floor_db=round(self._floor_db, 2) if self._floor_db is not None else None,
+                  air_ms=round(1e3 * total, 2), q=self.queue_len(), mute=int(self._tx["mute"]),
+                  wait_ms=round(1e3 * max((self._t - f["t_enq"]) for f in frames), 2), unrel=int(bool(unrel)),
++                 dups=[f["sn"] for f in frames if f.get("dup")], pre1=frames[0].get("pre"),
+                  **self._keep_list([{"keep": f["keep"]} for f in frames]))
+         if self._tx["mute"]:
+             self._tx["seq"] = self._sync_mute()
+@@ -1351,7 +1526,7 @@
+             self._txop_done("-")
+             self._reset_contention()
+             return
+-        self._await = {"dst": tx["dst"], "bsn": tx["bsn"], "recs": tx["recs"], "n": len(tx["frames"]),
++        self._await = {"dst": tx["dst"], "bsn": tx["bsn"], "recs": tx["recs"], "pos": tx["pos"], "n": len(tx["frames"]),
+                        "air_end": tx["air_end"], "deadline": tx["air_end"] + self.ba_timeout_s}
+         self._ev("ba_wait", bsn=tx["bsn"], timeout_ms=round(1e3 * (self._await["deadline"] - self._t), 2))
+ 
+@@ -1363,7 +1538,7 @@
+         self._last_failed = a
+         self._ev("ba_timeout", bsn=a["bsn"], dst=a["dst"], n=a["n"], next_cw=self._cw_for(self._k),
+                  sns=[r["sn"] for r in a["recs"]], **self._keep_list(a["recs"]))
+-        self._arq_inbox.append(("noba", a["dst"], a["recs"], 0, 0, a["bsn"]))
++        self._arq_inbox.append(("noba", a["dst"], a["pos"], None, a["bsn"]))
+         self._txop_done("timeout", acked=0)
+         self._reset_contention()
+ 
+@@ -1378,10 +1553,15 @@
+     def _abort_tx(self, why):
+         tx, self._tx = self._tx, {}
+         self._self_tx = False
++        back = set()
+         for f in tx["frames"]:
+             r = f.get("rec")
+-            if r is not None and r["state"] == "out":
++            if r is None:
++                continue
++            if r["state"] == "out":
+                 r["state"] = "retx" if r["retries"] > 0 else "new"
++                back.add(id(r))
++            if id(r) in back:
+                 r["tx"] -= 1
+         self._st["aborted"] += 1
+         self._ev("abort", why=why, kind=tx["kind"], bsn=tx["bsn"])
+@@ -1439,7 +1619,17 @@
+                     rs = self._rx_s.get(ba["src"])
+                     ba["rws"] = rs.rws if rs else 0
+                     ba["framed"] = True
+-                    self._frame(ba, ba_frame(ba["bsn"], ba["rws"], ba["cnt"], ba["bits"]), ba["src"], {})
++                    if self.window_ba:                        # v6.9.2: bitmap of the whole reorder window
++                        nbits = self._wba_bits()
++                        wbits = 0
++                        for sn in (rs.buf if rs else ()):
++                            d = sdiff(sn, ba["rws"])
++                            if 0 <= d < nbits:
++                                wbits |= 1 << d
++                        body = wba_frame(ba["bsn"], ba["rws"], nbits, wbits)
++                    else:
++                        body = ba_frame(ba["bsn"], ba["rws"], ba["cnt"], ba["bits"])
++                    self._frame(ba, body, ba["src"], {})
+                 if ba["coded"] is not None:
+                     self._start_ba(ba)
+             return
+@@ -1721,7 +1911,8 @@
+               f"{100 * self._busy_time / span:.1f} %, NAV {100 * self._nav_time / span:.1f} % | bursts by size {{{bs}}}, "
+               f"Block ACKs received {st['ba_rx']} (late {st['late_ba']}), timeouts {st['ba_timeout']}, CW "
+               f"{self.cw()} | Block ACKs sent {st['tx_BA']}, NAV set {st['nav_set']}x", flush=True)
+-        print(f"[ARQ] frames sent {st['tx_D']} (retransmissions {st['tx_retx']}), acknowledged {st['acked']}, "
++        print(f"[ARQ] frames sent {st['tx_D']} (retransmissions {st['tx_retx']}, duplicates {st['tx_dup']}), "
++              f"acknowledged {st['acked']}, "
+               f"dropped after {self.retry_limit} retries {st['retry_drop']}, queue drops {st['qdrop']} | received "
+               f"{st['rx_data']} new + {st['rx_dup']} duplicates, given up {st['rx_gave_up']} | "
+               f"{self.window_info()} | delay median {1e3 * np.median(dl) if dl else 0:.0f} ms, Block ACK round trip "
+--- a/cdp_link_epy_block_0_0_1.py
++++ b/cdp_link_epy_block_0_0_1.py
+@@ -14,6 +14,10 @@
+     3. dest_id
+ - fec = 0 / 15 / 31 (Hamming), interleave = column-wise codeword order. Must match the deframer.
+ - Postamble pads the frame to whole Pluto sink buffers (never shorter than one buffer).
++- v6.9.2: PDU metadata key "pre_len" (integer, bytes) overrides preamble_len for that one frame. The MAC uses it
++  to give the first frame of every transmission a longer preamble (the receiver acquires from silence there).
++- v6.9.3: PDU metadata key "post_len" (integer, bytes) sets the postamble of that one frame exactly (the MAC sends
++  frames 2..M of a burst with a short preamble and no postamble, and pads the whole burst after its last frame).
+ - v6.7: verbose = 0 stops the per-message [TX] lines (the DCF MAC prints its own); metadata keys mac_id / mac_type /
+   mac_seq from the MAC are passed on to pdu_out, so the coded frame finds its way back to the MAC entry.
+ - Stress-test build: PDU metadata keys stress_seq / stress_type are passed on, msg_id / src_id / dest_id / plen
+@@ -212,19 +216,30 @@
+         need = raw_len + unit                                           # leave one full buffer of postamble
+         return (-(-need // unit)) * unit - raw_len
+ 
+-    def build_frame(self, header, payload):
+-        preamble = bytes([self.preamble_byte]) * self.preamble_len
++    def build_frame(self, header, payload, pre_len=None, post_len=None):
++        n_pre = self.preamble_len if pre_len is None else max(0, int(pre_len))
++        preamble = bytes([self.preamble_byte]) * n_pre
+         train = TRAIN_WORD if self.train_enable else b""
+         raw = preamble + train + SYNC_WORD + self._coded_body(header, payload)
+-        return raw + bytes([self.postamble_byte]) * self._postamble_len(len(raw))
++        n_post = self._postamble_len(len(raw)) if post_len is None else max(0, int(post_len))
++        return raw + bytes([self.postamble_byte]) * n_post
+ 
+     def handle_msg(self, msg):
+         passthru = []
++        pre_len = post_len = None
+         if pmt.is_pair(msg) and pmt.is_dict(pmt.car(msg)):
+             for key in ("stress_seq", "stress_type", "mac_id", "mac_type", "mac_seq"):
+                 v = pmt.dict_ref(pmt.car(msg), pmt.intern(key), pmt.PMT_NIL)
+                 if not pmt.is_null(v):
+                     passthru.append((key, v))
++            v = pmt.dict_ref(pmt.car(msg), pmt.intern("pre_len"), pmt.PMT_NIL)
++            if pmt.is_integer(v):
++                pre_len = max(0, min(4096, pmt.to_long(v)))
++                passthru.append(("pre_len", pmt.from_long(pre_len)))
++            v = pmt.dict_ref(pmt.car(msg), pmt.intern("post_len"), pmt.PMT_NIL)
++            if pmt.is_integer(v):
++                post_len = max(0, min(65536, pmt.to_long(v)))
++                passthru.append(("post_len", pmt.from_long(post_len)))
+         try:
+             payload, dst, is_text = self._extract(msg)
+         except Exception as e:
+@@ -258,7 +273,7 @@
+ 
+         for rep in range(n_reps):
+             header = len(payload).to_bytes(2, "big") + bytes([dst, self.src_id, msg_id, rep, n_reps])
+-            frame = self.build_frame(header, payload)
++            frame = self.build_frame(header, payload, pre_len, post_len)
+ 
+             meta = pmt.make_dict()
+             meta = pmt.dict_add(meta, pmt.intern("tx_sob"), pmt.PMT_T)
+--- a/cdp_link.py
++++ b/cdp_link.py
+@@ -80,14 +80,22 @@
+         # Variables
+         ##################################################
+         self.alpha = alpha = 0.35
+-        self.TRAIN_BITS = TRAIN_BITS = np.unpackbits(np.frombuffer(bytes([0xF8, 0xDD, 0x42, 0x58]), np.uint8))
++        self.MOD = MOD = 'qpsk' if os.environ.get('CDP_MOD', 'bpsk').strip().lower() == 'qpsk' else 'bpsk'
++        self.BPS = BPS = 2 if MOD == 'qpsk' else 1
++        self.BPSK_CONST = BPSK_CONST = digital.constellation_rect([1+0j, -1+0j], [0, 1],
++        2, 2, 1, 1, 1).base()
++        self.QPSK_CONST = QPSK_CONST = digital.constellation_rect([-1-1j, -1+1j, 1+1j, 1-1j], [0, 1, 3, 2],
++        4, 2, 2, 1, 1).base()
++        self.MOD_CONST = MOD_CONST = QPSK_CONST if BPS == 2 else BPSK_CONST
++        self.PHY_PRE = PHY_PRE = 128*BPS
++        self.PRE1 = PRE1 = int(os.environ.get('CDP_MAC_PRE1', str(256*BPS)))
++        self.PRE_IN = PRE_IN = int(os.environ.get('CDP_MAC_PRE_IN', str(64*BPS)))
++        self.TRAIN_BITS = TRAIN_BITS = np.unpackbits(np.frombuffer(bytes([0xF8, 0xDD, 0x42, 0x58] + ([0x1A, 0xCF, 0xFC, 0x1D] if BPS == 2 else [])), np.uint8))
+         self.RC_X = RC_X = np.arange(-8, 9)/2.0
+-        self.TRAIN_SYMS = TRAIN_SYMS = list(map(complex, 1 - 2*np.bitwise_xor.accumulate(TRAIN_BITS).astype(int)))
++        self.TRAIN_SYMS = TRAIN_SYMS = list(map(complex, np.array(QPSK_CONST.points())[np.cumsum(np.array([0, 1, 3, 2])[2*TRAIN_BITS[0::2] + TRAIN_BITS[1::2]]) % 4])) if BPS == 2 else list(map(complex, 1 - 2*np.bitwise_xor.accumulate(TRAIN_BITS).astype(int)))
+         self.RX_AMP = RX_AMP = 1.0
+         self.RC_PULSE = RC_PULSE = np.sinc(RC_X)*np.cos(np.pi*alpha*RC_X)/(1-(2*alpha*RC_X)**2)
+         self.FREQ = FREQ = 2.49e9
+-        self.BPSK_CONST = BPSK_CONST = digital.constellation_rect([1+0j, -1+0j], [0, 1],
+-        2, 2, 1, 1, 1).base()
+         self.train_delay = train_delay = 0
+         self.sym_bw = sym_bw = 0.020
+         self.sps = sps = 4
+@@ -99,7 +107,7 @@
+         self.cs_margin = cs_margin = 6
+         self.costas_bw = costas_bw = 0.06
+         self.corr_thr = corr_thr = 0.7
+-        self.adpt_alg = adpt_alg = digital.adaptive_algorithm_nlms( BPSK_CONST, 0.5).base()
++        self.adpt_alg = adpt_alg = digital.adaptive_algorithm_nlms( MOD_CONST, 0.5).base()
+         self.UDP_PORT = UDP_PORT = int(os.environ.get('CDP_UDP_PORT', '5200'))
+         self.UDP_OUT_PORT = UDP_OUT_PORT = int(os.environ.get('CDP_UDP_OUT_PORT', '5201'))
+         self.TX_MUTE = TX_MUTE = 1
+@@ -109,8 +117,6 @@
+         self.TRAIN_REF = TRAIN_REF = list(map(complex, RX_AMP*np.convolve(np.kron(TRAIN_SYMS, [1, 0]), RC_PULSE)[8:8+2*len(TRAIN_SYMS)-1]))
+         self.SDR_CF = SDR_CF = 433e6
+         self.RX_FREQ = RX_FREQ = FREQ
+-        self.QPSK_CONST = QPSK_CONST = digital.constellation_rect([-1-1j, -1+1j, 1+1j, 1-1j], [0, 1, 3, 2],
+-        4, 2, 2, 1, 1).base()
+         self.MY_ID = MY_ID = int(os.environ.get('CDP_MY_ID', '1'))
+         self.MAC_UDPQ = MAC_UDPQ = int(os.environ.get('CDP_UDP_QUEUE', '32'))
+         self.MAC_TXOP = MAC_TXOP = float(os.environ.get('CDP_MAC_TXOP', '0.25'))
+@@ -118,7 +124,7 @@
+         self.MAC_SLOT = MAC_SLOT = float(os.environ.get('CDP_MAC_SLOT', '0.002'))
+         self.MAC_SIFS = MAC_SIFS = float(os.environ.get('CDP_MAC_SIFS', '0.001'))
+         self.MAC_RETRY = MAC_RETRY = int(os.environ.get('CDP_MAC_RETRY', '7'))
+-        self.MAC_P = MAC_P = float(os.environ.get('CDP_MAC_P', '0.2'))
++        self.MAC_P = MAC_P = float(os.environ.get('CDP_MAC_P', '0.5'))
+         self.MAC_KMAX = MAC_KMAX = int(os.environ.get('CDP_MAC_KMAX', '5'))
+         self.MAC_DIFS = MAC_DIFS = float(os.environ.get('CDP_MAC_DIFS', '0'))
+         self.MAC_CWMIN = MAC_CWMIN = int(os.environ.get('CDP_MAC_CWMIN', '15'))
+@@ -217,11 +223,11 @@
+         self.iio_pluto_sink_0_0.set_attenuation(0, CH_GAIN)
+         self.iio_pluto_sink_0_0.set_filter_params('Auto', '', 0, 0)
+         self.epy_logger = epy_logger.SessionLogger(my_id=MY_ID, log_dir='', flush_s=0.5, idle_every_s=10.0)
+-        self.epy_csma = epy_csma.SrArqMac(samp_rate=samp_rate, samples_per_byte=8*sps, my_id=MY_ID, dest_id=DEST_ID, burst_m=ARQ_M, window_n=ARQ_N, txop_limit_s=MAC_TXOP, p_persist=MAC_P, slot_s=MAC_SLOT, sifs_s=MAC_SIFS, turnaround_s=MAC_TURN, difs_s=MAC_DIFS, cw_min=MAC_CWMIN, cw_max=MAC_CWMAX, k_max=MAC_KMAX, retry_limit=MAC_RETRY, ba_timeout_s=MAC_BA_TO, max_queue=256, udp_queue=MAC_UDPQ, phy_preamble_len=128, phy_fec=FEC, phy_buffer_size=BUFFER_SIZE, phy_max_payload=max_payload_len, cs_margin_db=cs_margin, cs_hyst_db=2.0, cs_bw_hz=400000.0, dc_exclude_hz=10000.0, nfft=256, sense_s=0.001, floor_window_s=2.0, floor_percentile=10.0, floor_rise_db_s=1.0, blank_rx=1, tx_delay_s=0.012, auto_delay=1, gate_guard_s=0.005, tx_mute=TX_MUTE, iio_uri=ADDR, tx_att_db=CH_GAIN, mute_att_db=89.75, unmute_timeout_s=0.1, echo_margin_db=25.0, verbose=1, stats_every_s=10.0)
++        self.epy_csma = epy_csma.SrArqMac(samp_rate=samp_rate, samples_per_byte=8*sps//BPS, my_id=MY_ID, dest_id=DEST_ID, burst_m=ARQ_M, window_n=ARQ_N, txop_limit_s=MAC_TXOP, p_persist=MAC_P, slot_s=MAC_SLOT, sifs_s=MAC_SIFS, turnaround_s=MAC_TURN, difs_s=MAC_DIFS, cw_min=MAC_CWMIN, cw_max=MAC_CWMAX, k_max=MAC_KMAX, retry_limit=MAC_RETRY, ba_timeout_s=MAC_BA_TO, max_queue=256, udp_queue=MAC_UDPQ, phy_preamble_len=PHY_PRE, phy_fec=FEC, phy_buffer_size=BUFFER_SIZE, phy_max_payload=max_payload_len, cs_margin_db=cs_margin, cs_hyst_db=2.0, cs_bw_hz=400000.0, dc_exclude_hz=10000.0, nfft=256, sense_s=0.001, floor_window_s=2.0, floor_percentile=10.0, floor_rise_db_s=1.0, blank_rx=1, tx_delay_s=0.012, auto_delay=1, gate_guard_s=0.005, tx_mute=TX_MUTE, iio_uri=ADDR, tx_att_db=CH_GAIN, mute_att_db=89.75, unmute_timeout_s=0.1, echo_margin_db=25.0, verbose=1, stats_every_s=10.0, first_pre_len=PRE1, dup_after=-1, window_ba=-1, pre_in=PRE_IN)
+         self.epy_bridge = epy_bridge.AppBridge(my_id=MY_ID, host='127.0.0.1', arq_port=ARQ_PORT, udp_bind='127.0.0.1', udp_port=UDP_PORT, udp_out_port=UDP_OUT_PORT, mss=APP_MSS, inflight=APP_INFLIGHT, window=ARQ_N, max_msg=16000000, msg_timeout_s=0.0, stall_s=APP_STALL, verbose=1)
+         self.epy_block_corr = epy_block_corr.TrainCorr(ref=TRAIN_REF, thr=corr_thr, mark_delay=train_delay, verbose=1)
+-        self.epy_block_0_0_1 = epy_block_0_0_1.PacketFramerTX(src_id=MY_ID, dest_id=DEST_ID, preamble_len=128, repeat_count=1, max_payload_len=max_payload_len, preamble_byte=0xFF, buffer_size=BUFFER_SIZE, postamble_byte=0xFF, train_enable=1, fec=FEC, interleave=True, samples_per_byte=8*sps, verbose=0)
+-        self.epy_block_0_0_0 = epy_block_0_0_0.PacketDeframerRX(src_id=MY_ID, max_bit_errors=1, max_payload_len=max_payload_len, bit_rate=375000, fec=FEC, interleave=True, accept_all=1, debug=1, max_dbg_lines=10, stats_every_s=10.0, dup_window_s=2.0, print_rx=0)
++        self.epy_block_0_0_1 = epy_block_0_0_1.PacketFramerTX(src_id=MY_ID, dest_id=DEST_ID, preamble_len=PHY_PRE, repeat_count=1, max_payload_len=max_payload_len, preamble_byte=0xFF, buffer_size=BUFFER_SIZE, postamble_byte=0xFF, train_enable=1, fec=FEC, interleave=True, samples_per_byte=8*sps//BPS, verbose=0)
++        self.epy_block_0_0_0 = epy_block_0_0_0.PacketDeframerRX(src_id=MY_ID, max_bit_errors=1, max_payload_len=max_payload_len, bit_rate=int(samp_rate/sps*BPS), fec=FEC, interleave=True, accept_all=1, debug=1, max_dbg_lines=10, stats_every_s=10.0, dup_window_s=2.0, print_rx=0)
+         self.digital_symbol_sync_xx_0 = digital.symbol_sync_cc(
+             digital.TED_SIGNAL_TIMES_SLOPE_ML,
+             sps,
+@@ -236,10 +242,10 @@
+             [])
+         self.digital_linear_equalizer_0 = digital.linear_equalizer(7, 2, adpt_alg, False, TRAIN_SYMS, "corr_est")
+         self.digital_fll_band_edge_cc_0 = digital.fll_band_edge_cc(sps, alpha, (11* sps +1), fll_loop_bw)
+-        self.digital_diff_decoder_bb_0_0 = digital.diff_decoder_bb(2, digital.DIFF_DIFFERENTIAL)
+-        self.digital_costas_loop_cc_0 = digital.costas_loop_cc(costas_bw, BPSK_CONST.arity(), False)
++        self.digital_diff_decoder_bb_0_0 = digital.diff_decoder_bb(MOD_CONST.arity(), digital.DIFF_DIFFERENTIAL)
++        self.digital_costas_loop_cc_0 = digital.costas_loop_cc(costas_bw, MOD_CONST.arity(), False)
+         self.digital_constellation_modulator_0_0_0 = digital.generic_mod(
+-            constellation=BPSK_CONST,
++            constellation=MOD_CONST,
+             differential=True,
+             samples_per_symbol=sps,
+             pre_diff_code=True,
+@@ -247,9 +253,10 @@
+             verbose=False,
+             log=False,
+             truncate=False)
+-        self.digital_constellation_decoder_cb_0_0 = digital.constellation_decoder_cb(BPSK_CONST)
++        self.digital_constellation_decoder_cb_0_0 = digital.constellation_decoder_cb(MOD_CONST)
+         self.dc_blocker_xx_0 = filter.dc_blocker_cc(128, True)
+-        self.blocks_unpack_k_bits_bb_0_0 = blocks.unpack_k_bits_bb(1)
++        self.blocks_unpack_k_bits_bb_0_0 = blocks.unpack_k_bits_bb(BPS)
++        self.digital_map_bb_0_1 = digital.map_bb([0, 1, 3, 2] if BPS == 2 else [0, 1])
+         self.blocks_tag_gate_0_0 = blocks.tag_gate(gr.sizeof_gr_complex * 1, False)
+         self.blocks_tag_gate_0_0.set_single_key("")
+         self.blocks_copy_1_2 = blocks.copy(gr.sizeof_gr_complex*1)
+@@ -287,7 +294,8 @@
+         self.connect((self.digital_constellation_decoder_cb_0_0, 0), (self.digital_diff_decoder_bb_0_0, 0))
+         self.connect((self.digital_constellation_modulator_0_0_0, 0), (self.blocks_tag_gate_0_0, 0))
+         self.connect((self.digital_costas_loop_cc_0, 0), (self.digital_constellation_decoder_cb_0_0, 0))
+-        self.connect((self.digital_diff_decoder_bb_0_0, 0), (self.blocks_unpack_k_bits_bb_0_0, 0))
++        self.connect((self.digital_diff_decoder_bb_0_0, 0), (self.digital_map_bb_0_1, 0))
++        self.connect((self.digital_map_bb_0_1, 0), (self.blocks_unpack_k_bits_bb_0_0, 0))
+         self.connect((self.digital_fll_band_edge_cc_0, 0), (self.blocks_copy_1_2, 0))
+         self.connect((self.digital_linear_equalizer_0, 0), (self.digital_costas_loop_cc_0, 0))
+         self.connect((self.digital_symbol_sync_xx_0, 0), (self.epy_block_corr, 0))
+@@ -319,7 +327,7 @@
+ 
+     def set_TRAIN_BITS(self, TRAIN_BITS):
+         self.TRAIN_BITS = TRAIN_BITS
+-        self.set_TRAIN_SYMS(list(map(complex, 1 - 2*np.bitwise_xor.accumulate(self.TRAIN_BITS).astype(int))))
++        self.set_TRAIN_SYMS(list(map(complex, np.array(self.QPSK_CONST.points())[np.cumsum(np.array([0, 1, 3, 2])[2*self.TRAIN_BITS[0::2] + self.TRAIN_BITS[1::2]]) % 4])) if self.BPS == 2 else list(map(complex, 1 - 2*np.bitwise_xor.accumulate(self.TRAIN_BITS).astype(int))))
+ 
+     def get_RC_X(self):
+         return self.RC_X
+--- a/cdp_daemon.py
++++ b/cdp_daemon.py
+@@ -23,9 +23,10 @@
+   6. voice (cdp_voice.py): "🎙 Talk" = live voice over the datagram service, on until clicked again; "🎤 Voice msg" =
+      record, then send as a reliable chat item. The daemon owns CDP_UDP_OUT_PORT and forwards the game's
+      datagrams to CDP_GAME_UDP_PORT (5202), where it tells the game to listen.
+-  7. "📊 Performance dashboard" (cdp_metrics.py): live charts of this link in the web browser
+-     (http://127.0.0.1:5310/), from the session logs the flowgraph writes
+-  8. "Close everything" (or closing the window, or --shutdown from another program) stops the game, the
++  7. "📊 Performance dashboard" (cdp_dashboard.py): live charts of this link in a window of this app, from the
++     session logs the flowgraph writes (v6.9.3; the web page of v6.9 is gone)
++  8. the login screen also chooses the modulation (BPSK or QPSK, env CDP_MOD / --mod); both PCs must use the same
++  9. "Close everything" (or closing the window, or --shutdown from another program) stops the game, the
+      flowgraph, GNU Radio Companion and this daemon
+ 
+ Logs in the session folder (see LOGS.md): daemon.log, session.json, chat.csv - plus everything the flowgraph's
+@@ -61,14 +62,13 @@
+ HERE = Path(__file__).resolve().parent
+ sys.path.insert(0, str(HERE))
+ import cdp_crypto                                         # noqa: E402  (key pair over a prime, message encryption)
+-import cdp_metrics                                        # noqa: E402  (performance dashboard)
++import cdp_metrics                                        # noqa: E402  (performance dashboard: the data)
+ import cdp_voice                                          # noqa: E402  (push-to-talk, voice messages)
+ ENV = os.environ.get
+ ARQ_PORT = int(ENV("CDP_ARQ_PORT", "5100"))
+ UDP_PORT = int(ENV("CDP_UDP_PORT", "5200"))
+ UDP_OUT_PORT = int(ENV("CDP_UDP_OUT_PORT", "5201"))
+ GAME_UDP_PORT = int(ENV("CDP_GAME_UDP_PORT", "5202"))     # the daemon forwards the game's datagrams here
+-DASH_PORT = int(ENV("CDP_DASH_PORT", "5310"))
+ CTL_PORT = int(ENV("CDP_CTL_PORT", "5300"))
+ IMG_MAX_PX = int(ENV("TL_IMG_MAX_PX", "800"))
+ IMG_QUALITY = int(ENV("TL_IMG_QUALITY", "70"))
+@@ -806,7 +806,7 @@
+     class LoginDialog(QDialog):
+         """Only this PC's node number (and how to start the flowgraph). The other nodes are found on the link."""
+ 
+-        def __init__(self, node, how, grc, can_direct, direct):
++        def __init__(self, node, how, grc, can_direct, direct, mod="bpsk"):
+             super().__init__()
+             self.setWindowTitle("CDP Link - login")
+             self.setMinimumWidth(380)
+@@ -833,6 +833,17 @@
+             (self.mode_direct if (direct and can_direct) else self.mode_grc).setChecked(True)
+             lay.addWidget(self.mode_grc)
+             lay.addWidget(self.mode_direct)
++            lay.addSpacing(6)
++            lay.addWidget(QLabel("<b>Modulation</b> <span style='color:#888'>(every PC on the link must use the "
++                                 "same)</span>"))
++            self.mod_bpsk = QRadioButton("BPSK - robust, 250 kbit/s on the air at 1 MS/s")
++            self.mod_qpsk = QRadioButton("QPSK - twice as fast (500 kbit/s), needs about 3 dB more signal")
++            gm = QButtonGroup(self)
++            gm.addButton(self.mod_bpsk)
++            gm.addButton(self.mod_qpsk)
++            (self.mod_qpsk if mod == "qpsk" else self.mod_bpsk).setChecked(True)
++            lay.addWidget(self.mod_bpsk)
++            lay.addWidget(self.mod_qpsk)
+             bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+             bb.button(QDialogButtonBox.Ok).setText("Log in")
+             bb.accepted.connect(self.accept)
+@@ -840,7 +851,7 @@
+             lay.addWidget(bb)
+ 
+         def values(self):
+-            return self.me.value(), self.mode_direct.isChecked()
++            return self.me.value(), self.mode_direct.isChecked(), ("qpsk" if self.mod_qpsk.isChecked() else "bpsk")
+ 
+     def compress_image(path, max_px=IMG_MAX_PX, quality=IMG_QUALITY):
+         img = QImage(path)
+@@ -890,7 +901,7 @@
+             sl = QVBoxLayout(side)
+             sl.setContentsMargins(12, 14, 12, 12)
+             sl.addWidget(QLabel("CDP Link", objectName="title"))
+-            me = QLabel(f"● You: {node_name(self.core.me)}")
++            me = QLabel(f"● You: {node_name(self.core.me)} · {self.st.mod.upper()}")
+             me.setStyleSheet("color:#2BAC76; font-weight:bold;")
+             me.setToolTip(f"node number {self.st.node_how}; set it with  export CDP_MY_ID=N  or  --node N")
+             sl.addWidget(me)
+@@ -907,7 +918,7 @@
+             self.game_btn.setVisible(self.st.game_cmd is not None)
+             sl.addWidget(self.game_btn)
+             b = QPushButton("📊  Performance dashboard")
+-            b.setToolTip("Live charts of this link (opens in the web browser)")
++            b.setToolTip("Live charts of this link (a window of this app)")
+             b.clicked.connect(self.open_dashboard)
+             sl.addWidget(b)
+             self.enc_btn = QPushButton("")
+@@ -1050,11 +1061,21 @@
+ 
+         # ---- dashboard, encryption, voice
+         def open_dashboard(self):
+-            url = self.st.open_dashboard()
+-            if url:
+-                QDesktopServices.openUrl(QUrl(url))
+-            else:
+-                QMessageBox.warning(self, "Dashboard", "The dashboard could not start (see daemon.log).")
++            if self.st.metrics is None:
++                QMessageBox.warning(self, "Dashboard", "No session logs yet (see daemon.log).")
++                return
++            if getattr(self, "_dash", None) is None:
++                try:
++                    import cdp_dashboard
++                    self._dash = cdp_dashboard.DashboardWindow(
++                        self.st.metrics, f"CDP Link - performance - {node_name(self.core.me)}")
++                except Exception as e:
++                    self.st.session.log(f"dashboard: {e}")
++                    QMessageBox.warning(self, "Dashboard", f"The dashboard could not open: {e}")
++                    return
++            self._dash.show()
++            self._dash.raise_()
++            self._dash.activateWindow()
+ 
+         def toggle_encryption(self):
+             self.core.set_encryption(not self.core.encrypt_on)
+@@ -1322,6 +1343,8 @@
+                     return
+             self._closing = True
+             self.timer.stop()
++            if getattr(self, "_dash", None) is not None:
++                self._dash.close()
+             self.st.shutdown()
+             e.accept()
+             QApplication.quit()
+@@ -1417,7 +1440,7 @@
+         self.hub = None
+         self.voice = None
+         self.metrics = None
+-        self.dash = None
++        self.mod = "bpsk"
+ 
+     def last_login(self):
+         try:
+@@ -1432,7 +1455,7 @@
+                   "CDP_PEERS": ",".join(map(str, peers)), "CDP_DEBUG_DIR": str(self.session.dir),
+                   "CDP_HOME": str(HERE),                                 # where the blocks find cdp_fast.py
+                   "CDP_ARQ_PORT": str(ARQ_PORT), "CDP_UDP_PORT": str(UDP_PORT), "CDP_UDP_OUT_PORT": str(UDP_OUT_PORT),
+-                  "CDP_CTL_PORT": str(CTL_PORT)})
++                  "CDP_CTL_PORT": str(CTL_PORT), "CDP_MOD": self.mod})
+         return e
+ 
+     def game_env(self):
+@@ -1443,15 +1466,16 @@
+             e["CDP_UDP_OUT_PORT"] = str(GAME_UDP_PORT)
+         return e
+ 
+-    def start(self, me, direct, how):
+-        """Start as node `me` (from the login); the other nodes are discovered on the link."""
++    def start(self, me, direct, how, mod="bpsk"):
++        """Start as node `me` (from the login) with modulation `mod`; the other nodes are discovered on the link."""
+         self.me = me
+         self.node_how = how
++        self.mod = "qpsk" if mod == "qpsk" else "bpsk"
+         try:
+-            (HERE / ".cdp_last_login.json").write_text(json.dumps({"node": me, "direct": direct}))
++            (HERE / ".cdp_last_login.json").write_text(json.dumps({"node": me, "direct": direct, "mod": self.mod}))
+         except OSError:
+             pass
+-        self.session.login(me, [], {"node_from": how, "discovery": f"presence every {PRESENCE_S:g} s",
++        self.session.login(me, [], {"node_from": how, "discovery": f"presence every {PRESENCE_S:g} s", "mod": self.mod,
+                                     "grc": str(self.grc) if self.grc else None, "direct": direct,
+                                            "ports": {"arq": ARQ_PORT, "udp": UDP_PORT, "udp_out": UDP_OUT_PORT,
+                                                      "ctl": CTL_PORT},
+@@ -1510,19 +1534,6 @@
+         return {"nodes": nodes, "crypto": core.crypto_info(), "voice": voice, "node": self.me,
+                 "link_connected": bool(self.link and self.link.connected)}
+ 
+-    def open_dashboard(self):
+-        """-> URL of the dashboard (the server starts on first use) or None."""
+-        if self.metrics is None:
+-            return None
+-        if self.dash is None:
+-            self.dash = cdp_metrics.DashboardServer(self.metrics, DASH_PORT)
+-            if not self.dash.ok:
+-                self.session.log(f"dashboard: no free port near {DASH_PORT} ({self.dash.error})")
+-                self.dash = None
+-                return None
+-            self.session.log(f"dashboard on {self.dash.url}")
+-        return self.dash.url
+-
+     def prepare_fast(self):
+         """Build the flowgraph's C++ kernels (cdp_fast.cpp) now, in the background, so the flowgraph finds them
+         compiled when it starts. Without them it runs its original Python code (slower, same results)."""
+@@ -1573,7 +1584,7 @@
+ 
+     def shutdown(self):
+         self.session.log("closing everything")
+-        for x in (self.voice, self.hub, self.dash, self.metrics):
++        for x in (self.voice, self.hub, self.metrics):
+             try:
+                 if x is not None:
+                     x.close()
+@@ -1626,6 +1637,8 @@
+     ap.add_argument("--grc", default=None, help="flowgraph file (default: v6.9*cdp_link*.grc next to this file)")
+     ap.add_argument("--direct", action="store_true", help="run the generated flowgraph script without the GRC window "
+                                                           "(needs one run from GRC first, which generates it)")
++    ap.add_argument("--mod", choices=("bpsk", "qpsk"), default=None, help="modulation (default: $CDP_MOD, else the one "
++                                                                         "used last time, else bpsk)")
+     ap.add_argument("--shutdown", action="store_true", help="tell a running daemon to close everything, then exit")
+     a = ap.parse_args()
+     if a.shutdown:
+@@ -1642,15 +1655,16 @@
+         me, how = pick_node(None, {})
+     can_direct = st.grc is not None and generated_script(st.grc) is not None
+     direct = bool(a.direct or ENV("CDP_DIRECT", "") == "1" or last.get("direct"))
+-    dlg = LoginDialog(me, how, st.grc, can_direct, direct)
++    mod = (a.mod or ENV("CDP_MOD", "").strip().lower() or last.get("mod") or "bpsk")
++    dlg = LoginDialog(me, how, st.grc, can_direct, direct, "qpsk" if mod == "qpsk" else "bpsk")
+     if dlg.exec_() != QDialog.Accepted:
+         st.session.log("login cancelled")
+         st.session.close()
+         return
+-    me2, direct = dlg.values()
++    me2, direct, mod = dlg.values()
+     if me2 != me:
+         how = "chosen at login"
+-    st.start(me2, direct and can_direct, how)
++    st.start(me2, direct and can_direct, how, mod)
+     w = ChatWindow(st)
+     w.show()
+ 
+--- a/cdp_metrics.py
++++ b/cdp_metrics.py
+@@ -1,22 +1,12 @@
+ #!/usr/bin/env python3
+ """
+-cdp_metrics.py - performance dashboard for the CDP link: reads the session logs the flowgraph writes (csma_*.csv,
+-phy_1s.csv, udp.csv, arq_tx.csv, msgs.csv, events.log - see LOGS.md) while they grow, and serves a live dashboard
+-page on this PC.
+-
+-From the chat window: "📊 Performance dashboard" (cdp_daemon.py starts the server and opens the browser).
+-For an old session, or the other PC's logs:
+-    python3 cdp_metrics.py debug/<session>                   # live/replay server -> http://127.0.0.1:5311/
+-    python3 cdp_metrics.py debug/<session> --html report.html  # one self-contained page (send it, open anywhere)
+-
+-The page (no internet needed, everything is inside it) shows:
+-  - status tiles for the last 10 s: link, throughput, channel busy, queueing delay, frame errors, datagram loss,
+-    Block ACK timeouts, PC load - each marked ok / warning / critical
+-  - charts over the last 1 / 5 / 15 min or the whole session, 1 s per point: throughput, frames, channel use,
+-    delays, errors, retries, queues, PC load, voice
+-  - the nodes heard (with their key fingerprints), the last reliable messages, the last events
++cdp_metrics.py - the data behind the performance dashboard: reads the session logs the flowgraph writes
++(csma_*.csv, phy_1s.csv, udp.csv, arq_tx.csv, msgs.csv, events.log - see LOGS.md) while they grow, and turns them
++into per-second rows and 10-second key figures (Metrics.snapshot).
++
++v6.9.3: the dashboard is a window of the app (cdp_dashboard.py, PyQt5); the web page and its server are gone.
++    python3 cdp_dashboard.py debug/<session>         # an old session, or the other PC's logs
+ """
+-import argparse
+ import csv
+ import io
+ import json
+@@ -24,9 +14,7 @@
+ import os
+ import threading
+ import time
+-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+ from pathlib import Path
+-from urllib.parse import parse_qs, urlparse
+ 
+ FILES = ("csma_1s.csv", "csma_txop.csv", "udp.csv", "phy_1s.csv", "arq_tx.csv", "arq_rx.csv", "msgs.csv")
+ KEEP_S = 4 * 3600                      # bins kept in memory
+@@ -567,422 +555,10 @@
+             "seconds": len(rows)}
+ 
+ 
+-# ---------------------------------------------------------------- web server
+-class _Handler(BaseHTTPRequestHandler):
+-    metrics = None
+-
+-    def log_message(self, *a):
+-        pass
+-
+-    def _send(self, code, body, ctype):
+-        self.send_response(code)
+-        self.send_header("Content-Type", ctype)
+-        self.send_header("Cache-Control", "no-store")
+-        self.send_header("Content-Length", str(len(body)))
+-        self.end_headers()
+-        self.wfile.write(body)
+-
+-    def do_GET(self):
+-        u = urlparse(self.path)
+-        if u.path in ("/", "/index.html"):
+-            self._send(200, page().encode(), "text/html; charset=utf-8")
+-        elif u.path == "/api/metrics":
+-            q = parse_qs(u.query)
+-            try:
+-                w = float(q.get("window", ["300"])[0])
+-            except ValueError:
+-                w = 300.0
+-            try:
+-                body = json.dumps(self.metrics.snapshot(w), separators=(",", ":"), default=str).encode()
+-                self._send(200, body, "application/json")
+-            except Exception:
+-                import traceback
+-                self._send(500, json.dumps({"error": traceback.format_exc()[-1500:]}).encode(), "application/json")
+-        else:
+-            self._send(404, b"not found", "text/plain")
+-
+-
+-class DashboardServer:
+-    def __init__(self, metrics, port=5310, host="127.0.0.1"):
+-        handler = type("H", (_Handler,), {"metrics": metrics})
+-        self.srv = None
+-        self.error = ""
+-        for p in range(port, port + 10):
+-            try:
+-                self.srv = ThreadingHTTPServer((host, p), handler)
+-                break
+-            except OSError as e:
+-                self.error = str(e)
+-        if self.srv is None:
+-            return
+-        self.url = f"http://{host}:{self.srv.server_address[1]}/"
+-        self.srv.daemon_threads = True
+-        threading.Thread(target=self.srv.serve_forever, name="dashboard", daemon=True).start()
+-
+-    @property
+-    def ok(self):
+-        return self.srv is not None
+-
+-    def close(self):
+-        if self.srv:
+-            self.srv.shutdown()
+-            self.srv.server_close()
+-
+-
+-def page(embedded=None):
+-    """The dashboard page. embedded = a snapshot to show without a server (--html)."""
+-    data = "null" if embedded is None else json.dumps(embedded, separators=(",", ":"), default=str).replace("</", "<\\/")
+-    return _PAGE.replace("/*__EMBEDDED__*/null", data)
+-
+-
+-_PAGE = r"""<!doctype html>
+-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+-<title>CDP Link Performance</title>
+-<style>
+-:root{color-scheme:light;--bg:#f4f3f0;--surface:#fcfcfb;--line:#e4e2dc;--grid:#ecebe6;--text:#0b0b0b;--text2:#52514e;
+---muted:#8a8984;--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--good:#0ca30c;--warn:#fab219;--serious:#ec835a;--crit:#d03b3b;
+---good-ink:#006300;--crit-ink:#b42828;--warn-ink:#8a5a00}
+-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#121211;--surface:#1a1a19;
+---line:#2e2e2b;--grid:#262624;--text:#f0efec;--text2:#c3c2b7;--muted:#8d8c86;--s1:#3987e5;--s2:#d95926;--s3:#199e70;
+---good-ink:#5fd35f;--crit-ink:#ff8a8a;--warn-ink:#ffcf5c}}
+-:root[data-theme="dark"]{color-scheme:dark;--bg:#121211;--surface:#1a1a19;--line:#2e2e2b;--grid:#262624;--text:#f0efec;
+---text2:#c3c2b7;--muted:#8d8c86;--s1:#3987e5;--s2:#d95926;--s3:#199e70;--good-ink:#5fd35f;--crit-ink:#ff8a8a;--warn-ink:#ffcf5c}
+-*{box-sizing:border-box}
+-body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+-header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:16px 20px 8px}
+-h1{font-size:18px;margin:0;font-weight:650}
+-.sub{color:var(--text2);font-size:13px}
+-.pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);
+-border-radius:999px;padding:3px 10px;font-size:12px;color:var(--text2)}
+-.dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+-.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
+-.seg button{border:0;background:none;color:var(--text2);padding:6px 11px;font:inherit;font-size:12.5px;cursor:pointer}
+-.seg button[aria-pressed="true"]{background:var(--text);color:var(--surface)}
+-main{padding:4px 20px 28px;max-width:1500px;margin:0 auto}
+-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(136px,1fr));gap:10px;margin:8px 0 16px}
+-.tile{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:88px}
+-.tile .k{font-size:12px;color:var(--text2);display:flex;justify-content:space-between;gap:6px}
+-.tile .v{font-size:24px;font-weight:650;margin-top:4px;font-variant-numeric:tabular-nums}
+-.tile .v small{font-size:13px;font-weight:500;color:var(--text2);margin-left:3px}
+-.tile .n{font-size:12px;color:var(--muted);margin-top:2px}
+-.st{font-size:11.5px;font-weight:600;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+-.st i{font-style:normal}
+-.st.good{color:var(--good-ink)}.st.warn{color:var(--warn-ink)}.st.crit{color:var(--crit-ink)}.st.none{color:var(--muted)}
+-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:12px}
+-.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px 8px;position:relative}
+-.card h2{font-size:13.5px;margin:0;font-weight:620}
+-.card .note{font-size:12px;color:var(--muted);margin:1px 0 4px}
+-.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--text2);margin:2px 0 2px}
+-.legend span{display:inline-flex;align-items:center;gap:5px}
+-.legend b{display:inline-block;width:14px;height:3px;border-radius:2px}
+-svg{display:block;width:100%;height:170px;overflow:visible}
+-svg text{fill:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}
+-.tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:8px;
+-padding:6px 8px;font-size:12px;box-shadow:0 4px 14px rgba(0,0,0,.12);display:none;white-space:nowrap;z-index:5}
+-.tip .tt{color:var(--muted);margin-bottom:2px}
+-.tip .row{display:flex;gap:6px;align-items:center}
+-.tip .row b{width:10px;height:3px;border-radius:2px;display:inline-block}
+-.tables{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:12px;margin-top:12px}
+-table{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
+-th{text-align:left;color:var(--text2);font-weight:600;border-bottom:1px solid var(--line);padding:5px 6px}
+-td{border-bottom:1px solid var(--grid);padding:5px 6px;color:var(--text)}
+-td.m{color:var(--muted)}
+-.empty{color:var(--muted);font-size:12.5px;padding:8px 0}
+-code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+-.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--text2);white-space:pre-wrap;
+-word-break:break-all;margin:0}
+-.notice{display:none;background:var(--surface);border:1px solid var(--warn);border-left-width:4px;border-radius:10px;
+-padding:10px 12px;margin:8px 0 4px;font-size:13px;color:var(--text)}
+-.notice.err{border-color:var(--crit)}
+-.notice pre{white-space:pre-wrap;word-break:break-all;margin:6px 0 0;font-size:11.5px;color:var(--text2)}
+-@media (max-width:520px){.grid,.tables{grid-template-columns:1fr}main{padding:4px 16px 24px}header{padding:14px 16px 6px}}
+-</style></head><body>
+-<header>
+- <div><h1>CDP link · performance</h1><div class="sub" id="sub">waiting for data…</div></div>
+- <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+-  <span class="pill" id="live"><span class="dot" id="livedot"></span><span id="livetxt">connecting</span></span>
+-  <div class="seg" role="group" aria-label="time window" id="win">
+-   <button data-w="60">1 min</button><button data-w="300" aria-pressed="true">5 min</button>
+-   <button data-w="900">15 min</button><button data-w="0">all</button></div>
+- </div>
+-</header>
+-<main>
+- <div class="notice" id="notice" role="status"></div>
+- <div class="tiles" id="tiles"></div>
+- <div class="grid" id="charts"></div>
+- <div class="tables">
+-  <div class="card"><h2>Nodes</h2><div class="note">heard by this PC · fingerprints of their public keys</div><div id="nodes"></div></div>
+-  <div class="card"><h2>Reliable messages</h2><div class="note">the last chat items and files (msgs.csv)</div><div id="msgs"></div></div>
+-  <div class="card"><h2>Encryption &amp; voice</h2><div class="note">this PC</div><div id="sec"></div></div>
+-  <div class="card"><h2>Events</h2><div class="note">the last rare events (events.log)</div><pre class="mono" id="events"></pre></div>
+- </div>
+- <p class="mono" id="files" style="margin-top:14px;color:var(--muted)"></p>
+-</main>
+-<script>
+-const EMBEDDED = /*__EMBEDDED__*/null;
+-let WIN = 300;
+-try { const w = localStorage.getItem("cdp_dash_win"); if (w !== null) WIN = +w; } catch (e) {}
+-const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+-const fmt = (v, d = 1) => v === null || v === undefined || Number.isNaN(v) ? "–" :
+-  (Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(d));
+-const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+-let T0 = null;
+-const clock = t => { if (T0 === null) return t.toFixed(0) + " s";
+-  const d = new Date((T0 + t) * 1000); return d.toTimeString().slice(0, 8); };
+-
+-// ---- status thresholds: [key, warn, crit, higher-is-worse]
+-const TILES = [
+- {k:"link", label:"Link"},
+- {k:"tx_kBps", label:"Sent on air", unit:"kB/s", d:2, note:r=>`datagrams in ${fmt(r.udp_rx_kBps,2)} kB/s`},
+- {k:"chat_tx", label:"Chat app", unit:"kB/s", d:2, note:r=>`received ${fmt(r.chat_rx,2)} kB/s · reliable frames in ${fmt(r.rx_rel,0)}/10 s`},
+- {k:"busy_pct", label:"Channel busy", unit:"%", warn:70, crit:90, note:r=>`own airtime ${fmt(r.tx_pct)} %`},
+- {k:"wait_p95", label:"Queueing delay p95", unit:"ms", warn:500, crit:2000, d:0, note:r=>`access ${fmt(r.att_p50,0)} ms median`},
+- {k:"crc_pct", label:"Frame errors (CRC)", unit:"%", warn:5, crit:20, note:()=>"of frames received"},
+- {k:"loss_pct", label:"Datagram loss", unit:"%", warn:5, crit:20, note:r=>`jitter p95 ${fmt(r.jitter_p95,0)} ms`},
+- {k:"ba_timeouts", label:"Block ACK timeouts", unit:"/10 s", warn:5, crit:30, d:0, note:r=>`gave up ${fmt(r.retry_drops,0)} frames`},
+- {k:"cpu", label:"PC load", unit:"% CPU", warn:85, crit:98, d:0, note:r=>`samples ${fmt(r.rate_pct,1)} % of rate`,
+-  extra:r=> r.rate_pct!==null && r.rate_pct!==undefined && r.rate_pct<95 ? "crit" : (r.rate_pct<99 ? "warn" : null)},
+-];
+-const ST = {good:["good","✓","ok"], warn:["warn","!","high"], crit:["crit","✕","critical"], none:["none","·","no data"]};
+-function status(t, v, r) {
+-  if (v === null || v === undefined) return "none";
+-  let s = "good";
+-  if (t.crit !== undefined && v >= t.crit) s = "crit"; else if (t.warn !== undefined && v >= t.warn) s = "warn";
+-  const e = t.extra ? t.extra(r) : null;
+-  if (e === "crit" || (e === "warn" && s === "good")) s = e;
+-  return s;
+-}
+-function stHtml(s, label) { const [c, ic, txt] = ST[s]; return `<span class="st ${c}"><i aria-hidden="true">${ic}</i>${label || txt}</span>`; }
+-
+-function tiles(d) {
+-  const r = d.kpi || {}, el = document.getElementById("tiles");
+-  const nodes = d.nodes || [];
+-  const on = nodes.filter(n => n.online).length;
+-  const linkOk = d.link_connected;
+-  let html = `<div class="tile"><div class="k">Link ${stHtml(linkOk === false ? "crit" : (age(d) > 15 ? "warn" : "good"),
+-     linkOk === false ? "no flowgraph" : (age(d) > 15 ? "stale" : "live"))}</div>
+-     <div class="v">${on}<small>of ${nodes.length} node${nodes.length === 1 ? "" : "s"} online</small></div>
+-     <div class="n">${d.node !== undefined && d.node !== null ? "this PC: node " + esc(d.node) : ""}</div></div>`;
+-  for (const t of TILES.slice(1)) {
+-    const v = r[t.k], s = status(t, v, r);
+-    const idle = s === "none" && (d.state === "idle" || d.state === "live");
+-    html += `<div class="tile"><div class="k">${t.label} ${stHtml(s, idle ? "no traffic" : undefined)}</div>
+-      <div class="v">${fmt(v, t.d ?? 1)}<small>${t.unit}</small></div><div class="n">${t.note ? t.note(r) : ""}</div></div>`;
+-  }
+-  el.innerHTML = html;
+-}
+-const age = d => d.age_s === null || d.age_s === undefined ? 0 : d.age_s;
+-
+-// ---- charts: one y-axis each, 1-3 series, crosshair tooltip
+-const CHARTS = [
+- {id:"thr", title:"Throughput", note:"payload handed to the air, and datagrams received (kB/s)", unit:"kB/s",
+-  s:[["tx_kBps","sent","--s1"],["udp_rx_kBps","datagrams received","--s2"]]},
+- {id:"frm", title:"Frames per second", note:"data frames sent and received", unit:"/s",
+-  s:[["tx_frames","sent","--s1"],["rx_frames","received","--s2"],["rx_rel","reliable received (new)","--s3"]]},
+- {id:"chan", title:"Channel use", note:"share of each second", unit:"%", max:100,
+-  s:[["busy_pct","medium busy","--s1"],["tx_pct","own transmissions","--s2"]]},
+- {id:"del", title:"Delays", note:"queueing p95, channel access median, datagram jitter p95 (ms)", unit:"ms",
+-  s:[["wait_p95","queueing p95","--s1"],["att_p50","access median","--s2"],["jitter_p95","jitter p95","--s3"]]},
+- {id:"err", title:"Errors", note:"frames with a CRC error, datagrams lost (%)", unit:"%",
+-  s:[["crc_pct","CRC errors","--s1"],["loss_pct","datagrams lost","--s2"]]},
+- {id:"rty", title:"Retries & drops", note:"per second", unit:"/s",
+-  s:[["ba_timeouts","Block ACK timeouts","--s1"],["retry_drops","given up","--s2"],["udp_drops","datagram queue full","--s3"]]},
+- {id:"que", title:"Queues", note:"frames waiting in the MAC", unit:"frames",
+-  s:[["queue","all","--s1"],["udp_q","datagrams","--s2"]]},
+- {id:"pc", title:"PC load", note:"flowgraph CPU (100 = one core) and samples delivered (% of the sample rate)", unit:"%",
+-  s:[["cpu","CPU","--s1"],["rate_pct","samples","--s2"]]},
+- {id:"app", title:"Chat app", note:"this app's messages and files: delivered (acknowledged) and received (kB/s)", unit:"kB/s",
+-  s:[["chat_tx","sent, delivered","--s1"],["chat_rx","received","--s2"]]},
+- {id:"voice", title:"Voice", note:"live voice on the air (kB/s)", unit:"kB/s",
+-  s:[["voice_tx","sent","--s1"],["voice_rx","received","--s2"]]},
+-];
+-const charts = document.getElementById("charts");
+-for (const c of CHARTS) {
+-  const div = document.createElement("div");
+-  div.className = "card"; div.id = "c_" + c.id;
+-  div.innerHTML = `<h2>${c.title}</h2><div class="note">${c.note}</div>
+-    <div class="legend">${c.s.map(([k, n, col]) => `<span><b style="background:var(${col})"></b>${n}</span>`).join("")}</div>
+-    <svg role="img" aria-label="${c.title} over time"></svg><div class="tip"></div>`;
+-  charts.appendChild(div);
+-}
+-function niceStep(v) { if (!(v > 0)) return 0.25; const p = Math.pow(10, Math.floor(Math.log10(v))); const m = v / p;
+-  return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p; }
+-const HOVER = {};
+-function draw(c, rows, lo, hi) {
+-  const div = document.getElementById("c_" + c.id), svg = div.querySelector("svg"), tip = div.querySelector(".tip");
+-  const W = svg.clientWidth || 400, H = 170, L = 38, R = 8, Tp = 8, B = 20;
+-  let ymax = 0;
+-  for (const r of rows) for (const [k] of c.s) if (r[k] !== null && r[k] !== undefined) ymax = Math.max(ymax, r[k]);
+-  const step = c.max && ymax <= c.max ? c.max / 4 : niceStep(ymax / 4);
+-  ymax = step * 4;
+-  const span = Math.max(1, hi - lo);
+-  const x = t => L + (t - lo) / span * (W - L - R), y = v => Tp + (1 - v / ymax) * (H - Tp - B);
+-  let g = "";
+-  for (let i = 0; i <= 4; i++) { const v = ymax * i / 4, yy = y(v);
+-    g += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="var(--grid)" stroke-width="1"/>`;
+-    g += `<text x="${L - 6}" y="${yy + 3.5}" text-anchor="end">${+v.toFixed(2)}</text>`; }
+-  const ticks = Math.max(2, Math.min(4, Math.floor((W - L - R) / 90)));
+-  for (let i = 0; i <= ticks; i++) { const t = lo + span * i / ticks;
+-    g += `<text x="${x(t)}" y="${H - 4}" text-anchor="${i === 0 ? "start" : i === ticks ? "end" : "middle"}">${clock(t)}</text>`; }
+-  g += `<line x1="${L}" x2="${W - R}" y1="${y(0)}" y2="${y(0)}" stroke="var(--line)" stroke-width="1"/>`;
+-  let any = false;
+-  for (const [k, , col] of c.s) {
+-    let d = "", prev = null;
+-    for (const r of rows) { const v = r[k];
+-      if (v === null || v === undefined) continue;
+-      any = true;
+-      const gap = prev !== null && r.t - prev > 12;
+-      d += (d === "" || gap ? "M" : "L") + x(r.t).toFixed(1) + " " + y(Math.min(v, ymax)).toFixed(1);
+-      prev = r.t; }
+-    if (d) g += `<path d="${d}" fill="none" stroke="var(${col})" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+-  }
+-  if (!any) g += `<text x="${(L + W) / 2}" y="${H / 2}" text-anchor="middle">no data in this window</text>`;
+-  g += `<line class="xh" x1="0" x2="0" y1="${Tp}" y2="${H - B}" stroke="var(--muted)" stroke-width="1" visibility="hidden"/>`;
+-  g += `<rect x="${L}" y="${Tp}" width="${W - L - R}" height="${H - Tp - B}" fill="transparent"/>`;
+-  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+-  svg.innerHTML = g;
+-  const xh = svg.querySelector(".xh");
+-  const show = clientX => {
+-    if (!rows.length) return;
+-    const bx = svg.getBoundingClientRect(), px = (clientX - bx.left) * W / bx.width;
+-    const t = lo + (px - L) / (W - L - R) * span;
+-    let best = rows[0]; for (const r of rows) if (Math.abs(r.t - t) < Math.abs(best.t - t)) best = r;
+-    xh.setAttribute("x1", x(best.t)); xh.setAttribute("x2", x(best.t)); xh.setAttribute("visibility", "visible");
+-    tip.innerHTML = `<div class="tt">${clock(best.t)}</div>` + c.s.map(([k, n, col]) =>
+-      `<div class="row"><b style="background:var(${col})"></b>${n}: <strong>${fmt(best[k], 2)}</strong> ${c.unit}</div>`).join("");
+-    tip.style.display = "block";
+-    const left = clientX - div.getBoundingClientRect().left;
+-    tip.style.left = Math.max(6, Math.min(left + 12, div.clientWidth - tip.offsetWidth - 6)) + "px";
+-    tip.style.top = "56px"; };
+-  svg.onmousemove = e => { HOVER[c.id] = e.clientX; show(e.clientX); };
+-  svg.onmouseleave = () => { delete HOVER[c.id]; xh.setAttribute("visibility", "hidden"); tip.style.display = "none"; };
+-  if (HOVER[c.id] !== undefined) show(HOVER[c.id]);       // keep the tooltip while the data refreshes
+-}
+-function tables(d) {
+-  const nodes = d.nodes || [];
+-  document.getElementById("nodes").innerHTML = nodes.length ? `<table><tr><th>node</th><th>computer</th><th>state</th>
+-    <th>last heard</th><th>key fingerprint</th></tr>` + nodes.map(n => `<tr><td>${esc(n.node)}</td><td>${esc(n.host || "–")}</td>
+-    <td>${n.online ? stHtml("good", "online") : stHtml("none", "away")}</td><td class="m">${n.last_heard_s === null ? "–" : fmt(n.last_heard_s, 0) + " s ago"}</td>
+-    <td><code>${esc(n.fingerprint || "no key yet")}</code></td></tr>`).join("") + "</table>"
+-    : `<div class="empty">${d.nodes === undefined ? "only shown when opened from the chat window" : "no other node heard yet"}</div>`;
+-  const m = (d.msgs || []).slice().reverse();
+-  document.getElementById("msgs").innerHTML = m.length ? `<table><tr><th>time</th><th>dir</th><th>node</th><th>size</th>
+-    <th>took</th><th>kB/s</th><th>result</th></tr>` + m.map(r => `<tr><td class="m">${clock(+r.t)}</td><td>${esc(r.dir)}</td>
+-    <td>${esc(r.peer)}</td><td>${fmt(+r.bytes / 1000, 1)} kB</td><td>${r.dur_s ? fmt(+r.dur_s, 1) + " s" : "–"}</td>
+-    <td>${r.kBps ? fmt(+r.kBps, 2) : "–"}</td><td>${/^(sent|ok)/.test(r.res || "") ? stHtml("good", esc(r.res)) : stHtml("crit", esc(r.res))}</td></tr>`).join("") + "</table>"
+-    : `<div class="empty">no reliable message yet</div>`;
+-  const c = d.crypto, v = d.voice;
+-  let s = "";
+-  if (c) s += `<table><tr><th colspan="2">encryption</th></tr><tr><td>state</td><td>${c.on ? stHtml("good", "on") : stHtml("warn", "off")}</td></tr>
+-    <tr><td>method</td><td>${esc(c.method)}</td></tr><tr><td>my fingerprint</td><td><code>${esc(c.fingerprint)}</code></td></tr>
+-    <tr><td>nodes with a key</td><td>${esc(c.peers_keyed)}</td></tr><tr><td>sent / received encrypted</td><td>${esc(c.sealed)} / ${esc(c.opened)}${c.failed ? " · " + c.failed + " failed" : ""}</td></tr></table>`;
+-  if (v) s += `<table style="margin-top:8px"><tr><th colspan="2">voice</th></tr><tr><td>audio</td><td>${esc(v.audio)}</td></tr>
+-    <tr><td>frames sent / received</td><td>${esc(v.tx_frames)} / ${esc(v.rx_frames)}</td></tr>
+-    <tr><td>lost / too late / filled in</td><td>${esc(v.lost)} / ${esc(v.late)} / ${esc(v.plc)}</td></tr>
+-    <tr><td>rejected (bad tag / no key)</td><td>${esc(v.auth_fail)} / ${esc(v.no_key)}</td></tr></table>`;
+-  document.getElementById("sec").innerHTML = s || `<div class="empty">only shown when opened from the chat window</div>`;
+-  document.getElementById("events").textContent = (d.events || []).slice().reverse().map(l => {
+-    const sp = l.indexOf(" "), t = parseFloat(l.slice(0, sp));
+-    return Number.isFinite(t) ? clock(t) + l.slice(sp) : l; }).join("\n") || "none";
+-}
+-function render(d) {
+-  T0 = d.t0;
+-  document.getElementById("sub").textContent =
+-    `node ${d.node ?? "?"} · ${d.host || ""} · session ${d.session}` + (d.settings && d.settings.CDP_SAMP_RATE ? ` · ${d.settings.CDP_SAMP_RATE} S/s` : "");
+-  const STATE = {live: ["var(--good)", "live"], idle: ["var(--good)", "live · link idle"],
+-    stopped: ["var(--warn)", `flowgraph stopped? no log rows for ${fmt(age(d), 0)} s`],
+-    waiting: ["var(--warn)", "waiting for the flowgraph's logs - press ▶ Run in GRC"],
+-    ended: ["var(--muted)", "session ended"]};
+-  const [col, txt] = EMBEDDED ? ["var(--muted)", "saved report"] : (STATE[d.state] || STATE.waiting);
+-  document.getElementById("livedot").style.background = col;
+-  document.getElementById("livetxt").textContent = txt + (EMBEDDED ? "" : ` · updated ${new Date().toTimeString().slice(0, 8)}`);
+-  const rows = d.rows || [];
+-  const hi = d.hi ?? (rows.length ? rows[rows.length - 1].t : 0);
+-  const lo = d.lo ?? (WIN > 0 ? hi - WIN : (rows.length ? rows[0].t : 0));
+-  const vis = rows.filter(r => r.t >= lo);
+-  const f = d.files || {};
+-  document.getElementById("files").textContent = d.dir ? `reading ${d.dir}  ·  ` + Object.entries(f).map(([n, v]) =>
+-    `${n} ${v.rows} rows${v.last_t !== null && v.last_t !== undefined ? " (last " + clock(v.last_t) + ")" : ""}`).join("  ·  ") : "";
+-  showNotice(d.note ? esc(d.note) : "", false);
+-  tiles(d);
+-  for (const c of CHARTS) draw(c, vis, lo, hi);
+-  tables(d);
+-}
+-function showNotice(html, err) {
+-  const n = document.getElementById("notice");
+-  n.className = "notice" + (err ? " err" : ""); n.innerHTML = html; n.style.display = html ? "block" : "none";
+-}
+-let LAST = null, TIMER = null, BUSY = false;
+-async function poll() {
+-  if (EMBEDDED) { LAST = EMBEDDED; render(EMBEDDED); return; }
+-  if (BUSY) return;                                   // never two requests at once
+-  BUSY = true;
+-  const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 8000);
+-  let d = null;
+-  try {
+-    const r = await fetch(`/api/metrics?window=${WIN > 0 ? WIN : 0}&_=${Date.now()}`, {cache: "no-store", signal: ctl.signal});
+-    d = await r.json();
+-    if (!r.ok || d.error) throw {server: d.error || ("HTTP " + r.status)};
+-  } catch (e) {
+-    clearTimeout(to); BUSY = false;
+-    document.getElementById("livedot").style.background = "var(--crit)";
+-    if (e && e.server) {
+-      document.getElementById("livetxt").textContent = "dashboard error (details above the tiles)";
+-      showNotice(`The dashboard could not read the logs. Please send this text:<pre>${esc(e.server)}</pre>`, true);
+-    } else {
+-      document.getElementById("livetxt").textContent = "dashboard server not answering (chat window closed?) · " +
+-        new Date().toTimeString().slice(0, 8);
+-    }
+-    return;
+-  }
+-  clearTimeout(to); BUSY = false;
+-  LAST = d;
+-  try { render(d); }
+-  catch (e) {
+-    showNotice(`The page could not draw this data. Please send this text:<pre>${esc(e && e.stack || e)}</pre>`, true);
+-  }
+-}
+-function schedule() { clearTimeout(TIMER); TIMER = setTimeout(async () => { await poll(); schedule(); }, 1000); }
+-document.addEventListener("visibilitychange", () => { if (!document.hidden) { poll(); schedule(); } });
+-for (const b of document.querySelectorAll("#win button")) {
+-  b.setAttribute("aria-pressed", String(+b.dataset.w === WIN));
+-  b.onclick = () => { WIN = +b.dataset.w;
+-    try { localStorage.setItem("cdp_dash_win", String(WIN)); } catch (e) {}
+-    for (const x of document.querySelectorAll("#win button")) x.setAttribute("aria-pressed", String(x === b));
+-    if (LAST && EMBEDDED) render(LAST); else { BUSY = false; poll(); } };
+-}
+-window.addEventListener("resize", () => LAST && render(LAST));
+-poll();
+-if (!EMBEDDED) schedule();
+-</script></body></html>
+-"""
+-
+-
+ def main():
+-    ap = argparse.ArgumentParser(description=__doc__.split("\n")[1], formatter_class=argparse.RawDescriptionHelpFormatter)
+-    ap.add_argument("session", help="a session folder, e.g. debug/20261019_153000_node0")
+-    ap.add_argument("--port", type=int, default=5311)
+-    ap.add_argument("--html", default=None, help="write one self-contained page instead of serving")
+-    a = ap.parse_args()
+-    m = Metrics(a.session)
+-    if a.html:
+-        Path(a.html).write_text(page(m.snapshot(0)))
+-        print(f"dashboard written to {a.html}")
+-        return
+-    srv = DashboardServer(m, a.port)
+-    if not srv.ok:
+-        raise SystemExit(f"cannot open a port near {a.port}: {srv.error}")
+-    print(f"dashboard: {srv.url}  (Ctrl-C to stop)")
+-    try:
+-        import webbrowser
+-        webbrowser.open(srv.url)
+-    except Exception:
+-        pass
+-    try:
+-        while True:
+-            time.sleep(3600)
+-    except KeyboardInterrupt:
+-        srv.close()
++    """the dashboard window for a session folder (cdp_dashboard.py)"""
++    import cdp_dashboard
++    cdp_dashboard.main()
+ 
+ 
+ if __name__ == "__main__":

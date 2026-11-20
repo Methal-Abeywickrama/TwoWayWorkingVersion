@@ -1,0 +1,7 @@
+0.489 bridge client ev=connect peer=127.0.0.1:46136 n=1
+35.816 csma retry_drop dst=2 seq=0 retries=7 app_ref=1565481501 app_seg=0
+35.816 bridge seg_resend mid=1565481501 seg=0 why=dropped resent=1 acked=0 segs=1
+37.459 csma retry_drop dst=2 seq=1 retries=7 app_ref=1565481501 app_seg=0
+37.459 bridge seg_resend mid=1565481501 seg=0 why=dropped resent=2 acked=0 segs=1
+181.179 bridge client ev=disconnect n=0
+181.341 flowgraph stopped

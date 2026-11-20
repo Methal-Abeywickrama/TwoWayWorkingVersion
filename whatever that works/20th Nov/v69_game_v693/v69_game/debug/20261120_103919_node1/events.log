@@ -1,0 +1,3 @@
+0.045 bridge client ev=connect peer=127.0.0.1:52772 n=1
+162.102 bridge client ev=disconnect n=0
+162.214 flowgraph stopped

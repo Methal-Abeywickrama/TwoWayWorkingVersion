@@ -1,0 +1,7 @@
+t,dir,peer,id,kind,name,bytes,ref,dur_s,kBps,age_s,res
+35.769,rx,2,a6dafa2b22,text,,72,,,,0.706,received
+40.656,rx,2,4500e8c13a,text,,75,,,,2.885,received
+54.05,rx,2,4764caece1,text,,86,,,,1.312,received
+56.991,tx,2,4eefbcc6cd,text,,117,1899110042,,,,queued
+61.906,tx,2,4eefbcc6cd,text,,117,1899110042,4.914,0.02,,sent
+117.792,rx,2,c4ac81c2d8,image,images.jpg,22807,,,,45.98,received

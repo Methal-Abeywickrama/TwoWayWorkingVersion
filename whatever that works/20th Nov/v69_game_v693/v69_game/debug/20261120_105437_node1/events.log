@@ -1,0 +1,112 @@
+0.715 bridge client ev=connect peer=127.0.0.1:39308 n=1
+16.020 csma retry_drop dst=2 seq=0 retries=7 app_ref=1864060521 app_seg=0
+16.021 bridge seg_resend mid=1864060521 seg=0 why=dropped resent=1 acked=0 segs=1
+17.393 csma retry_drop dst=2 seq=1 retries=7 app_ref=1864060522 app_seg=0
+17.393 bridge seg_resend mid=1864060522 seg=0 why=dropped resent=1 acked=0 segs=1
+17.766 csma retry_drop dst=2 seq=2 retries=7 app_ref=1864060523 app_seg=0
+17.766 bridge seg_resend mid=1864060523 seg=0 why=dropped resent=1 acked=0 segs=1
+20.043 csma retry_drop dst=2 seq=3 retries=7 app_ref=1864060524 app_seg=0
+20.043 csma retry_drop dst=2 seq=4 retries=7 app_ref=1864060525 app_seg=0
+20.043 bridge seg_resend mid=1864060524 seg=0 why=dropped resent=1 acked=0 segs=1
+20.043 bridge seg_resend mid=1864060525 seg=0 why=dropped resent=1 acked=0 segs=1
+21.809 csma retry_drop dst=2 seq=5 retries=7 app_ref=1864060526 app_seg=0
+21.809 bridge seg_resend mid=1864060526 seg=0 why=dropped resent=1 acked=0 segs=1
+21.809 bridge seg_resend mid=1864060527 seg=0 why=dropped resent=1 acked=0 segs=1
+21.809 csma retry_drop dst=2 seq=6 retries=7 app_ref=1864060527 app_seg=0
+24.020 csma retry_drop dst=2 seq=7 retries=7 app_ref=1864060528 app_seg=0
+24.020 csma retry_drop dst=2 seq=8 retries=7 app_ref=1864060521 app_seg=0
+24.020 bridge seg_resend mid=1864060528 seg=0 why=dropped resent=1 acked=0 segs=1
+24.020 bridge seg_resend mid=1864060521 seg=0 why=dropped resent=2 acked=0 segs=1
+101.730 csma retry_drop dst=2 seq=52 retries=7 app_ref=1864060581 app_seg=0
+101.730 bridge seg_resend mid=1864060581 seg=0 why=dropped resent=1 acked=0 segs=1
+102.024 csma retry_drop dst=2 seq=53 retries=7 app_ref=1864060582 app_seg=0
+102.025 bridge seg_resend mid=1864060582 seg=0 why=dropped resent=1 acked=0 segs=1
+142.158 csma retry_drop dst=2 seq=134 retries=7 app_ref=1864060601 app_seg=64
+142.158 csma retry_drop dst=2 seq=135 retries=7 app_ref=1864060601 app_seg=65
+142.158 bridge seg_resend mid=1864060601 seg=64 why=dropped resent=1 acked=64 segs=87
+142.158 bridge seg_resend mid=1864060601 seg=65 why=dropped resent=2 acked=64 segs=87
+1204.701 csma transitions_suppressed n=14 sec=1203
+1205.697 csma transitions_suppressed n=90 sec=1204
+1206.766 csma transitions_suppressed n=140 sec=1205
+1207.773 csma transitions_suppressed n=22 sec=1206
+1211.887 csma transitions_suppressed n=34 sec=1210
+1218.990 csma transitions_suppressed n=14 sec=1217
+1705.123 csma transitions_suppressed n=4 sec=1703
+1733.119 csma transitions_suppressed n=4 sec=1731
+1739.111 csma transitions_suppressed n=33 sec=1737
+1740.103 csma transitions_suppressed n=120 sec=1738
+1741.106 csma transitions_suppressed n=6 sec=1739
+1743.105 csma transitions_suppressed n=72 sec=1741
+1744.108 csma transitions_suppressed n=40 sec=1742
+1755.102 csma transitions_suppressed n=139 sec=1753
+1756.105 csma transitions_suppressed n=164 sec=1754
+1757.146 csma transitions_suppressed n=23 sec=1755
+1896.115 csma transitions_suppressed n=6 sec=1894
+2198.538 csma retry_drop dst=2 seq=428 retries=7 app_ref=1864061005 app_seg=99
+2198.538 csma retry_drop dst=2 seq=429 retries=7 app_ref=1864061005 app_seg=100
+2198.538 bridge seg_resend mid=1864061005 seg=99 why=dropped resent=1 acked=99 segs=130
+2198.538 bridge seg_resend mid=1864061005 seg=100 why=dropped resent=2 acked=99 segs=130
+2201.929 csma retry_drop dst=2 seq=430 retries=7 app_ref=1864061005 app_seg=101
+2201.929 bridge seg_resend mid=1864061005 seg=101 why=dropped resent=3 acked=99 segs=130
+2201.929 csma retry_drop dst=2 seq=431 retries=7 app_ref=1864061005 app_seg=102
+2208.229 csma retry_drop dst=2 seq=432 retries=7 app_ref=1864061005 app_seg=103
+2208.229 csma retry_drop dst=2 seq=433 retries=7 app_ref=1864061005 app_seg=104
+2211.624 csma retry_drop dst=2 seq=434 retries=7 app_ref=1864061005 app_seg=105
+2211.624 csma retry_drop dst=2 seq=435 retries=7 app_ref=1864061005 app_seg=106
+2270.799 csma retry_drop dst=2 seq=472 retries=7 app_ref=1864061032 app_seg=5
+2270.799 bridge seg_resend mid=1864061032 seg=5 why=dropped resent=1 acked=12 segs=20
+2395.832 csma retry_drop dst=2 seq=488 retries=7 app_ref=1864061058 app_seg=0
+2395.832 bridge seg_resend mid=1864061058 seg=0 why=dropped resent=1 acked=0 segs=190
+2395.832 bridge seg_resend mid=1864061058 seg=1 why=dropped resent=2 acked=0 segs=190
+2395.832 csma retry_drop dst=2 seq=489 retries=7 app_ref=1864061058 app_seg=1
+2397.744 csma retry_drop dst=2 seq=490 retries=7 app_ref=1864061058 app_seg=2
+2397.744 csma retry_drop dst=2 seq=491 retries=7 app_ref=1864061058 app_seg=3
+2397.745 bridge seg_resend mid=1864061058 seg=2 why=dropped resent=3 acked=0 segs=190
+2402.131 csma retry_drop dst=2 seq=492 retries=7 app_ref=1864061058 app_seg=4
+2402.131 csma retry_drop dst=2 seq=493 retries=7 app_ref=1864061058 app_seg=5
+2404.343 csma retry_drop dst=2 seq=494 retries=7 app_ref=1864061058 app_seg=6
+2404.343 csma retry_drop dst=2 seq=495 retries=7 app_ref=1864061058 app_seg=7
+2408.156 csma retry_drop dst=2 seq=496 retries=7 app_ref=1864061058 app_seg=8
+2408.156 csma retry_drop dst=2 seq=497 retries=7 app_ref=1864061058 app_seg=9
+2410.360 csma retry_drop dst=2 seq=498 retries=7 app_ref=1864061058 app_seg=10
+2410.360 csma retry_drop dst=2 seq=499 retries=7 app_ref=1864061058 app_seg=11
+2414.145 csma retry_drop dst=2 seq=500 retries=7 app_ref=1864061058 app_seg=12
+2414.145 csma retry_drop dst=2 seq=501 retries=7 app_ref=1864061058 app_seg=13
+2416.305 csma retry_drop dst=2 seq=502 retries=7 app_ref=1864061058 app_seg=14
+2416.305 csma retry_drop dst=2 seq=503 retries=7 app_ref=1864061058 app_seg=15
+2420.153 csma retry_drop dst=2 seq=504 retries=7 app_ref=1864061058 app_seg=16
+2420.154 csma retry_drop dst=2 seq=505 retries=7 app_ref=1864061058 app_seg=17
+2422.070 csma retry_drop dst=2 seq=506 retries=7 app_ref=1864061058 app_seg=18
+2422.070 csma retry_drop dst=2 seq=507 retries=7 app_ref=1864061058 app_seg=19
+2425.892 csma retry_drop dst=2 seq=508 retries=7 app_ref=1864061058 app_seg=20
+2425.892 csma retry_drop dst=2 seq=509 retries=7 app_ref=1864061058 app_seg=21
+2428.243 csma retry_drop dst=2 seq=510 retries=7 app_ref=1864061058 app_seg=22
+2428.244 csma retry_drop dst=2 seq=511 retries=7 app_ref=1864061058 app_seg=23
+2431.725 csma retry_drop dst=2 seq=512 retries=7 app_ref=1864061058 app_seg=24
+2431.725 csma retry_drop dst=2 seq=513 retries=7 app_ref=1864061058 app_seg=25
+2433.224 csma retry_drop dst=2 seq=514 retries=7 app_ref=1864061058 app_seg=26
+2433.224 csma retry_drop dst=2 seq=515 retries=7 app_ref=1864061058 app_seg=27
+2436.366 csma retry_drop dst=2 seq=516 retries=7 app_ref=1864061058 app_seg=28
+2436.366 csma retry_drop dst=2 seq=517 retries=7 app_ref=1864061058 app_seg=29
+2438.008 csma retry_drop dst=2 seq=518 retries=7 app_ref=1864061058 app_seg=30
+2438.008 csma retry_drop dst=2 seq=519 retries=7 app_ref=1864061058 app_seg=31
+2441.363 csma retry_drop dst=2 seq=520 retries=7 app_ref=1864061058 app_seg=0
+2441.363 csma retry_drop dst=2 seq=521 retries=7 app_ref=1864061058 app_seg=1
+2442.788 csma retry_drop dst=2 seq=522 retries=7 app_ref=1864061058 app_seg=2
+2442.788 csma retry_drop dst=2 seq=523 retries=7 app_ref=1864061058 app_seg=3
+2445.958 csma retry_drop dst=2 seq=524 retries=7 app_ref=1864061058 app_seg=4
+2445.959 csma retry_drop dst=2 seq=525 retries=7 app_ref=1864061058 app_seg=5
+2447.453 csma retry_drop dst=2 seq=526 retries=7 app_ref=1864061058 app_seg=6
+2447.454 csma retry_drop dst=2 seq=527 retries=7 app_ref=1864061058 app_seg=7
+2450.533 csma retry_drop dst=2 seq=528 retries=7 app_ref=1864061058 app_seg=8
+2450.533 csma retry_drop dst=2 seq=529 retries=7 app_ref=1864061058 app_seg=9
+2451.996 csma retry_drop dst=2 seq=530 retries=7 app_ref=1864061058 app_seg=10
+2451.996 csma retry_drop dst=2 seq=531 retries=7 app_ref=1864061058 app_seg=11
+2454.957 csma retry_drop dst=2 seq=532 retries=7 app_ref=1864061058 app_seg=12
+2454.957 csma retry_drop dst=2 seq=533 retries=7 app_ref=1864061058 app_seg=13
+2456.694 csma retry_drop dst=2 seq=534 retries=7 app_ref=1864061058 app_seg=14
+2456.694 csma retry_drop dst=2 seq=535 retries=7 app_ref=1864061058 app_seg=15
+2459.950 csma retry_drop dst=2 seq=536 retries=7 app_ref=1864061058 app_seg=16
+2459.950 csma retry_drop dst=2 seq=537 retries=7 app_ref=1864061058 app_seg=17
+2530.545 bridge client ev=disconnect n=0
+2533.455 flowgraph stopped

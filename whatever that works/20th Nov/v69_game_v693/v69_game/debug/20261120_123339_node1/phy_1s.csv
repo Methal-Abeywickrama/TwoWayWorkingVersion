@@ -1,0 +1,4 @@
+t,corr_tags,corr_best,train,train_ok,locks,crc_fail,bad_len,ok,other,own,sq_eob,noise_db,squelch_db
+1.003,0,0.254,0,0,0,0,0,0,0,0,21,-50.78,-44.78
+2.003,0,0.305,0,0,0,0,0,0,0,0,37,-50.77,-44.77
+2.953,0,0.259,0,0,0,0,0,0,0,0,29,-50.68,-44.68

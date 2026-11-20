@@ -1,0 +1,35 @@
+{
+ "t0": 1795151359.502,
+ "started": "2026-11-20 10:39:19",
+ "host": "fedora",
+ "os": "Linux 6.19.10-300.fc44.x86_64",
+ "python": "3.14.6",
+ "daemon": "cdp_daemon v6.9",
+ "node": 1,
+ "opponents": [
+  2
+ ],
+ "node_from": "--node",
+ "discovery": "presence every 5 s",
+ "mod": "bpsk",
+ "grc": "/home/maduwage/TwoWayWorkingVersion/whatever that works/20th Nov/v69_game_v693/v69_game/v6.9_cdp_link.grc",
+ "direct": false,
+ "ports": {
+  "arq": 5100,
+  "udp": 5200,
+  "udp_out": 5201,
+  "ctl": 5300
+ },
+ "game_cmd": [
+  "/usr/bin/python3",
+  "-u",
+  "/home/maduwage/TwoWayWorkingVersion/whatever that works/20th Nov/v69_game_v693/v69_game/cdp_game.py"
+ ],
+ "peers": {
+  "2": {
+   "first_heard_s": 16.008,
+   "host": "MethalWorkstation"
+  }
+ },
+ "ended": "2026-11-20 10:47:41"
+}

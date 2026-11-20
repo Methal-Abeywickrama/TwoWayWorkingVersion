@@ -1,0 +1,48 @@
+    0.000 session folder /home/maduwage/TwoWayWorkingVersion/whatever that works/20th Nov/v69_game_v693/v69_game/debug/20261120_105437
+    3.842 start: node 1; the other nodes are found by their presence messages; logs in /home/maduwage/TwoWayWorkingVersion/whatever that works/20th Nov/v69_game_v693/v69_game/debug/20261120_105437_node1
+    3.847 encryption key pair ready, fingerprint 4C3B-243B-2DBA-B189 (/home/maduwage/.config/cdp_link/identity.json)
+    3.849 started grc (pid 29439): gnuradio-companion '/home/maduwage/TwoWayWorkingVersion/whatever that works/20th Nov/v69_game_v693/v69_game/v6.9_cdp_link.grc' - its output: /home/maduwage/TwoWayWorkingVersion/whatever that works/20th Nov/v69_game_v693/v69_game/debug/20261120_105437_node1/grc.log
+    3.855 voice: PipeWire/PulseAudio (parec, pacat)
+    3.856 link: no flowgraph on tcp://127.0.0.1:5100 yet (press Run in GRC)
+    3.941 C++ kernels for the flowgraph: ready (0.0 s)
+    9.859 link: connected to the flowgraph (node 1, mss 1000, window 16)
+   10.749 node 2 (MethalWorkstation) joined: new chat
+   10.777 node 2: public key 942A-1A9A-8451-4DF3
+  187.756 link: flowgraph connection closed
+  188.757 link: no flowgraph on tcp://127.0.0.1:5100 yet (press Run in GRC)
+  206.768 link: connected to the flowgraph (node 1, mss 1000, window 16)
+  256.499 link: flowgraph connection closed
+  257.500 link: no flowgraph on tcp://127.0.0.1:5100 yet (press Run in GRC)
+  287.526 link: no flowgraph on tcp://127.0.0.1:5100 yet (press Run in GRC)
+  305.540 link: connected to the flowgraph (node 1, mss 1000, window 16)
+  441.002 link: flowgraph connection closed
+  442.002 link: no flowgraph on tcp://127.0.0.1:5100 yet (press Run in GRC)
+  460.013 link: connected to the flowgraph (node 1, mss 1000, window 16)
+  763.353 link: flowgraph connection closed
+  764.354 link: no flowgraph on tcp://127.0.0.1:5100 yet (press Run in GRC)
+  794.381 link: no flowgraph on tcp://127.0.0.1:5100 yet (press Run in GRC)
+  824.403 link: no flowgraph on tcp://127.0.0.1:5100 yet (press Run in GRC)
+  854.429 link: no flowgraph on tcp://127.0.0.1:5100 yet (press Run in GRC)
+  884.458 link: no flowgraph on tcp://127.0.0.1:5100 yet (press Run in GRC)
+  914.487 link: no flowgraph on tcp://127.0.0.1:5100 yet (press Run in GRC)
+  944.516 link: no flowgraph on tcp://127.0.0.1:5100 yet (press Run in GRC)
+  974.540 link: no flowgraph on tcp://127.0.0.1:5100 yet (press Run in GRC)
+ 1004.565 link: no flowgraph on tcp://127.0.0.1:5100 yet (press Run in GRC)
+ 1034.593 link: no flowgraph on tcp://127.0.0.1:5100 yet (press Run in GRC)
+ 1064.615 link: no flowgraph on tcp://127.0.0.1:5100 yet (press Run in GRC)
+ 1094.630 link: no flowgraph on tcp://127.0.0.1:5100 yet (press Run in GRC)
+ 1124.656 link: no flowgraph on tcp://127.0.0.1:5100 yet (press Run in GRC)
+ 1154.684 link: no flowgraph on tcp://127.0.0.1:5100 yet (press Run in GRC)
+ 1184.713 link: no flowgraph on tcp://127.0.0.1:5100 yet (press Run in GRC)
+ 1214.740 link: no flowgraph on tcp://127.0.0.1:5100 yet (press Run in GRC)
+ 1244.771 link: no flowgraph on tcp://127.0.0.1:5100 yet (press Run in GRC)
+ 1274.792 link: no flowgraph on tcp://127.0.0.1:5100 yet (press Run in GRC)
+ 1304.812 link: no flowgraph on tcp://127.0.0.1:5100 yet (press Run in GRC)
+ 1334.833 link: no flowgraph on tcp://127.0.0.1:5100 yet (press Run in GRC)
+ 1364.853 link: no flowgraph on tcp://127.0.0.1:5100 yet (press Run in GRC)
+ 1394.875 link: no flowgraph on tcp://127.0.0.1:5100 yet (press Run in GRC)
+ 1424.900 link: no flowgraph on tcp://127.0.0.1:5100 yet (press Run in GRC)
+ 1454.924 link: no flowgraph on tcp://127.0.0.1:5100 yet (press Run in GRC)
+ 1455.925 link: connected to the flowgraph (node 1, mss 1000, window 16)
+ 3985.538 closing everything
+ 3985.538 stopped grc (exit -9)

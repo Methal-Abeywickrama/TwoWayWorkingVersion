@@ -1,0 +1,4 @@
+t,busy_pct,nav_pct,tx_pct,floor_db,thr_db,queue,udp_q,ba_due,cw,k,phase,awaiting_ba,rate_pct,echo_ms,mute,mute_wr_max_ms,deferrals,busy_on,nav_set,tx_D,tx_BA,ba_rx,ba_timeout,retry_drop,rx_data,rx_dup,windows,proc_cpu,load1
+1.003,54.38,0,0,-50.56,-44.56,0,0,0,15,0,idle,0,,,on,1.15,,13,,,,,,,,,,,1.22
+2.003,5.17,0,0,-50.55,-44.55,0,0,0,15,0,idle,0,99.89,,on,2.05,,28,,,,,,,,,,54.5,1.22
+2.953,7.38,0,0,-50.51,-44.51,0,0,0,15,0,idle,0,100.03,,on,2.05,,25,,,,,,,,,,64.6,1.22

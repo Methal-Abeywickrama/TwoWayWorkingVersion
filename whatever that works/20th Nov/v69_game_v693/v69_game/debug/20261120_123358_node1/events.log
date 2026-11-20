@@ -1,0 +1,8 @@
+0.000 bridge error what=tcp_bind err=[Errno 98] Address already in use
+4.201 csma transitions_suppressed n=14 sec=3
+7.045 csma transitions_suppressed n=33 sec=6
+8.092 csma transitions_suppressed n=69 sec=7
+9.100 csma transitions_suppressed n=64 sec=8
+10.103 csma transitions_suppressed n=96 sec=9
+13.147 csma transitions_suppressed n=40 sec=12
+20.452 flowgraph stopped

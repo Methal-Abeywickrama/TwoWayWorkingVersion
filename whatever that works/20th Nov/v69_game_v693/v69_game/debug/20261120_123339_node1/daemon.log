@@ -1,0 +1,12 @@
+    0.000 session folder /home/maduwage/TwoWayWorkingVersion/whatever that works/20th Nov/v69_game_v693/v69_game/debug/20261120_123339
+    5.279 start: node 1; the other nodes are found by their presence messages; logs in /home/maduwage/TwoWayWorkingVersion/whatever that works/20th Nov/v69_game_v693/v69_game/debug/20261120_123339_node1
+    5.279 control port 5300 busy: another daemon running? (--shutdown will not reach this one)
+    5.279 WARNING: something already listens on 5100 - an old flowgraph may still run
+    5.283 encryption key pair ready, fingerprint 4C3B-243B-2DBA-B189 (/home/maduwage/.config/cdp_link/identity.json)
+    5.283 udp 127.0.0.1:5201 busy ([Errno 98] Address already in use) - live voice off
+    5.286 started flowgraph (pid 64969): /usr/bin/python3 -u '/home/maduwage/TwoWayWorkingVersion/whatever that works/20th Nov/v69_game_v693/v69_game/cdp_link.py' - its output: this terminal and /home/maduwage/TwoWayWorkingVersion/whatever that works/20th Nov/v69_game_v693/v69_game/debug/20261120_123339_node1/flowgraph.log
+    5.293 voice: PipeWire/PulseAudio (parec, pacat) (live voice off: datagram port busy)
+    5.299 link: connected to the flowgraph (node 1, mss 1000, window 16)
+    5.422 C++ kernels for the flowgraph: ready (0.0 s)
+   16.688 closing everything
+   16.688 stopped flowgraph (exit 0)

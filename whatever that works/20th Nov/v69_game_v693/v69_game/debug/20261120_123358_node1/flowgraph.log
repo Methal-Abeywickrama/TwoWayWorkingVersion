@@ -1,0 +1,39 @@
+[TX] this node: src ID 1; messages go to dest ID all unless they start with '@<id> ' or '@all '
+[BRIDGE] cannot listen on TCP 127.0.0.1:5100: [Errno 98] Address already in use (another flowgraph still running?)
+[BRIDGE] node 1: reliable messages on tcp://127.0.0.1:5100, datagrams in udp://127.0.0.1:5200 -> out udp://127.0.0.1:5201 (mss 1000 B)
+[LOG] performance logs -> /home/maduwage/TwoWayWorkingVersion/whatever that works/20th Nov/v69_game_v693/v69_game/debug/20261120_123358_node1
+[FAST] noise floor: C++ kernel on[FAST] MAC carrier sense: C++ kernel on
+[FAST] correlator: C++ kernel on
+
+[FAST] deframer: C++ kernel on
+[RX] this node: src ID 1; delivers every good frame (accept_all) (FEC 31, sync word may have <= 1 bit errors)
+[MAC] ID 1: SR-ARQ burst M=4, window N=16, TXOP limit 250 ms | p-persist 0.2, slot 2 ms, SIFS 1 ms, DIFS 30.0 ms, CW 15, 31, 63, 63, 63, 63, retry limit 7, Block ACK timeout 70 ms (Block ACK 24.6 ms on air)
+[MAC] v6.9.2: first frame of a transmission with a 512 B preamble, a duplicate after 4 retries, Block ACK with the window bitmap
+[MAC] v6.9.3: frames 2..4 of a burst with a 64 B preamble and no postamble | 32 samples per byte, preamble 128 B
+[MAC] TX mute ready (libiio C library (libiio.so.0), ip:192.168.1.10)
+[SQL] noise floor -50.3 dB -> squelch threshold -44.3 dB
+[SQL] noise floor -49.3 dB -> squelch threshold -43.3 dB
+[SQL] noise floor -48.3 dB -> squelch threshold -42.3 dB
+[CORR] train word found: correlation = 0.99 (thr 0.70)
+[RX dbg] train word (corr 0.99): decoded train word 4/32 bits wrong, sync word 0/32 wrong -> the train word is not in the decoded bits: the demodulator output is wrong although the correlator saw the word (equalizer, Costas, slicer, diff decoder, DC offset)
+[RX dbg] frame: 649 B, CRC ok (FEC fixed 0 bits), src ID 1 -> all, msg #233 -> delivered
+[MAC] WARNING: received a frame with this node's own ID 1: another PC uses the same CDP_MY_ID, or this node's own burst leaked past the RX blanking (raise gate_guard_s).
+[CORR] no tag; strongest correlation in last window = 0.44 (thr 0.70)
+[RX stats] since last line: train words 1 (clean 0, sync word broken 0, no train word in the bits 1) | sync locks 1 | bad length 0 | CRC fail 0 (squelch closed inside 0) | CRC ok 1: delivered 1, repeats 0, for other nodes 0, own 0 | good frames by src ID: ID 1: 1 | squelch closures 980
+[MAC] floor -47.6 dB (+6), now -46.6 dB, busy 14.9 %, NAV 0.0 % | bursts by size {-}, Block ACKs received 0 (late 0), timeouts 0, CW 15 | Block ACKs sent 0, NAV set 0x
+[ARQ] frames sent 0 (retransmissions 0, duplicates 0), acknowledged 0, dropped after 7 retries 0, queue drops 0 | received 0 new + 0 duplicates, given up 0 | idle | delay median 0 ms, Block ACK round trip median 0.0 ms (timeout 70)
+[MAC] own echo 0.0 ms | TX mute on (write max 2.9 ms, late 0) | radio 99.5 % of samp_rate, MAC CPU 9 %
+[CORR] train word found: correlation = 0.99 (thr 0.70)
+[RX dbg] train word (corr 0.99): decoded train word 0/32 bits wrong, sync word 0/32 wrong -> clean, deframer can lock
+[RX dbg] frame: 649 B, CRC ok (FEC fixed 0 bits), src ID 1 -> all, msg #235 -> delivered
+[CORR] train word found: correlation = 0.99 (thr 0.70)
+[RX dbg] train word (corr 0.99): decoded train word 0/32 bits wrong, sync word 0/32 wrong -> clean, deframer can lock
+[RX dbg] frame: 649 B, CRC ok (FEC fixed 0 bits), src ID 1 -> all, msg #236 -> delivered
+[CORR] train word found: correlation = 0.99 (thr 0.70)
+[RX dbg] train word (corr 0.99): decoded train word 0/32 bits wrong, sync word 0/32 wrong -> clean, deframer can lock
+[RX dbg] frame: header says 648 B, src ID 1 -> dest ID 255, msg #237, CRC FAIL (FEC fixed 194 bits, still wrong)
+[RX stats] since last line: train words 3 (clean 3, sync word broken 0, no train word in the bits 0) | sync locks 3 | bad length 0 | CRC fail 1 (squelch closed inside 0) | CRC ok 2: delivered 2, repeats 0, for other nodes 0, own 0 | good frames by src ID: ID 1: 2 | squelch closures 662
+[MAC] floor -47.7 dB (+6), now -46.6 dB, busy 6.6 %, NAV 0.0 % | bursts by size {-}, Block ACKs received 0 (late 0), timeouts 0, CW 15 | Block ACKs sent 0, NAV set 0x
+[ARQ] frames sent 0 (retransmissions 0, duplicates 0), acknowledged 0, dropped after 7 retries 0, queue drops 0 | received 0 new + 0 duplicates, given up 0 | idle | delay median 0 ms, Block ACK round trip median 0.0 ms (timeout 70)
+[MAC] own echo 0.0 ms | TX mute on (write max 2.9 ms, late 0) | radio 99.9 % of samp_rate, MAC CPU 8 %
+[RX stats] total: train words 4 (clean 3, sync word broken 0, no train word in the bits 1) | sync locks 4 | bad length 0 | CRC fail 1 (squelch closed inside 0) | CRC ok 3: delivered 3, repeats 0, for other nodes 0, own 0 | good frames by src ID: none | squelch closures 1705
